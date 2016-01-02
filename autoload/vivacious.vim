@@ -247,7 +247,7 @@ function! s:fetch_all(args) abort
     if len(a:args) >= 1 && a:args[0] =~# '^\%(-h\|--help\)$'
         return s:cmd_fetch_all_help()
     endif
-    let lockfile = (a:0 ? a:1 : s:get_lockfile())
+    let lockfile = (len(a:args) >= 1 ? expand(a:args[0]) : s:get_lockfile())
     call s:fetch_all_from_lockfile(lockfile)
 endfunction
 
