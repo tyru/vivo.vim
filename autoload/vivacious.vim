@@ -17,23 +17,24 @@ function! vivacious#bundle(...)
 endfunction
 
 function! vivacious#install(...)
-    call s:call_with_error_handlers('s:install', a:000)
+    call s:call_with_error_handlers('s:install', a:000, 's:cmd_install_help')
 endfunction
 
 function! vivacious#remove(...) abort
-    call s:call_with_error_handlers('s:remove', a:000)
+    call s:call_with_error_handlers('s:remove', a:000, 's:cmd_remove_help')
 endfunction
 
 function! vivacious#purge(...) abort
-    call s:call_with_error_handlers('s:purge', a:000)
+    call s:call_with_error_handlers('s:purge', a:000, 's:cmd_purge_help')
 endfunction
 
 function! vivacious#list(...) abort
-    call s:call_with_error_handlers('s:list', a:000)
+    call s:call_with_error_handlers('s:list', a:000, 's:cmd_list_help')
 endfunction
 
 function! vivacious#fetch_all(...) abort
-    call s:call_with_error_handlers('s:fetch_all', a:000)
+    call s:call_with_error_handlers('s:fetch_all', a:000,
+    \                               's:cmd_fetch_all_help')
 endfunction
 
 
@@ -42,26 +43,26 @@ let s:is_windows = has('win16') || has('win32') || has('win64') || has('win95')
 let s:is_unix = has('unix')
 let s:NONE = []
 
-function! s:call_with_error_handlers(funcname, args) abort
+function! s:call_with_error_handlers(mainfunc, args, helpfunc) abort
     try
-        call {a:funcname}(a:args)
+        call {a:mainfunc}(a:args)
     catch /^vivacious:\s*fatal:/
         let e = substitute(v:exception, '^vivacious:\s*fatal:\s*', '', '')
         call s:error('Fatal error. '
         \          . 'Please report this to '
         \          . 'https://github.com/tyru/vivacious.vim/issues/new !')
         call s:error('Error: ' . e . ' at ' . v:throwpoint)
-        call s:cmd_install_help()
+        call {a:helpfunc}()
     catch /^vivacious:/
         let e = substitute(v:exception, '^vivacious:\s*', '', '')
         call s:error(e)
-        call s:cmd_install_help()
+        call {a:helpfunc}()
     catch
         call s:error('Internal error. '
         \          . 'Please report this to '
         \          . 'https://github.com/tyru/vivacious.vim/issues/new !')
         call s:error('Error: ' . v:exception . ' at ' . v:throwpoint)
-        call s:cmd_install_help()
+        call {a:helpfunc}()
     endtry
 endfunction
 
@@ -227,6 +228,13 @@ function! s:list(args) abort
     endfor
     echomsg ' '
     echomsg 'Listed managed plugins.'
+endfunction
+
+function! s:cmd_list_help() abort
+    echo ''
+    echo 'Usage: VivaList'
+    echo ''
+    echo 'Lists managed plugins including plugins which have been not fetched.'
 endfunction
 
 function! s:fetch_all(args) abort

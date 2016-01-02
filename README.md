@@ -117,7 +117,7 @@ Listed managed plugins.
 
 ## `:VivaList`
 
-* Lists managed plugins including not fetched plugins (See `How it works`).
+* Lists managed plugins including which have been not fetched (See `How it works`).
 
 ## `:VivaFetchAll`
 
