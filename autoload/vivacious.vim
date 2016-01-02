@@ -305,7 +305,7 @@ function! s:read_lockfile(lockfile) abort
 endfunction
 
 function! s:write_lockfile(lines, lockfile) abort
-    return writefile(["version:" + s:LOCKFILE_VERSION] + a:lines, a:lockfile)
+    return writefile(["version:" . s:LOCKFILE_VERSION] + a:lines, a:lockfile)
 endfunction
 
 function! s:get_record_by_name(name) abort
