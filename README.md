@@ -9,21 +9,24 @@ This plugin is designed for the following policies.
   * For completely restoring your current environment at another PC,
     you can manage the file by version control systems(aka Git, Mercurial, ...).
     And just typing `:VivaFetchAll /path/to/Vivacious.lock` or `:call vivacious#fetch_all('/path/to/Vivacious.lock')`, everything is done like `bundle install`.
-2. Install/Uninstall a plugin from command-line. Here are the examples.
+2. Of cource, Multi-platform is also **MUST**.
+  * It works with: Windows, Linux
+  * Maybe it works, but please tell me if it works: Mac OS X
+3. Install/Uninstall a plugin from command-line. Here are the examples.
   (See `Features` for details)
   * `:VivaInstall tyru/open-browser.vim`
   * `:VivaInstall https://github.com/tyru/open-browser.vim`
   * `:VivaPurge open-browser.vim`
   * `:VivaRemove open-browser.vim`
-3. I don't want to write plugins' names in .vimrc by hand!
+4. I don't want to write plugins' names in .vimrc by hand!
   * Okay, leave all stuffs about plugin management to vivacious.
     You don't need to concern about them.
   * It shouldn't be there(.vimrc)!!!
-4. I don't want to write plugins' configurations in .vimrc, too! (TODO)
+5. I don't want to write plugins' configurations in .vimrc, too! (TODO)
   * It is **painful** to remove the configurations by hand after you uninstall a plugin...
   * By default, a configuration file per a plugin is `~/.vim/bundleconfig/<plugin name>.vim`.
   * It also shouldn't be there! isn't it?
-5. Keep It Simple, Stupid
+6. Keep It Simple, Stupid
   * Vivacious doesn't slow down your vim startup, and not support any features not in this policies.
 
 # How it works
