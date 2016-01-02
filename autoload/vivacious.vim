@@ -105,7 +105,7 @@ function! s:install_git_plugin(url, redraw) abort
     call s:info_msg(printf("Fetching a plugin from '%s'... Done.", a:url))
     call s:source_plugin(plug_dir)
     if a:redraw
-        redraw
+        redraw    " before the last message
     endif
     call s:info_msg(printf("Installed a plugin '%s'.", plug_name))
     " Record the plugin info.
@@ -135,20 +135,29 @@ endfunction
 function! s:uninstall_plugin(plug_name) abort
     let vimbundle_dir = s:vimbundle_dir()
     let plug_dir = s:path_join(vimbundle_dir, a:plug_name)
-    if !isdirectory(plug_dir)
+    let exists_dir = isdirectory(plug_dir)
+    let has_record = s:record_has_name_of(a:plug_name)
+    if !exists_dir && !has_record
         throw "vivacious: '" . a:plug_name . "' is not installed."
     endif
     " Remove the plugin info.
-    call s:info(printf("Unrecording the plugin info of '%s'...", a:plug_name))
-    let git_dir = s:path_join(plug_dir, '.git')
-    let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
-    call s:unrecord_version_by_name(a:plug_name)
-    call s:info_msg(printf("Unrecording the plugin info of '%s'... Done.", a:plug_name))
+    if has_record
+        call s:info(printf("Unrecording the plugin info of '%s'...", a:plug_name))
+        let git_dir = s:path_join(plug_dir, '.git')
+        let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
+        call s:unrecord_version_by_name(a:plug_name)
+        if !exists_dir
+            redraw    " before the last message
+        endif
+        call s:info_msg(printf("Unrecording the plugin info of '%s'... Done.", a:plug_name))
+    endif
     " Remove the plugin directory.
-    call s:info(printf("Uninstalling the plugin '%s'...", a:plug_name))
-    call s:delete_dir(plug_dir)
-    redraw
-    call s:info_msg(printf("Uninstalling the plugin '%s'... Done.", a:plug_name))
+    if exists_dir
+        call s:info(printf("Uninstalling the plugin '%s'...", a:plug_name))
+        call s:delete_dir(plug_dir)
+        redraw    " before the last message
+        call s:info_msg(printf("Uninstalling the plugin '%s'... Done.", a:plug_name))
+    endif
 endfunction
 
 function! s:cmd_uninstall_help() abort
