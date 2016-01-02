@@ -92,7 +92,7 @@ function! s:install(args) abort
         call s:install_git_plugin(a:args[0], 1, s:vimbundle_dir())
         let plug_dir = s:path_join(s:vimbundle_dir(),
         \                          s:path_basename(a:args[0]))
-        call s:update_record(plug_dir)
+        call s:update_record(plug_dir, 1)
     else
         throw 'vivacious: VivaInstall: invalid arguments.'
     endif
@@ -104,7 +104,7 @@ function! s:install_github_plugin(arg) abort
     \           'https://github.com/' . a:arg, 1, s:vimbundle_dir())
     let plug_dir = s:path_join(s:vimbundle_dir(),
     \                          s:path_basename(a:arg))
-    call s:update_record(plug_dir)
+    call s:update_record(plug_dir, 1)
 endfunction
 
 function! s:install_git_plugin(url, redraw, vimbundle_dir) abort
@@ -132,7 +132,7 @@ function! s:install_git_plugin(url, redraw, vimbundle_dir) abort
     call s:info_msg(printf("Installed a plugin '%s'.", plug_name))
 endfunction
 
-function! s:update_record(plug_dir) abort
+function! s:update_record(plug_dir, update) abort
     " Record or Lock
     let plug_name = s:path_basename(a:plug_dir)
     let vim_lockfile = s:get_lockfile()
@@ -144,9 +144,26 @@ function! s:update_record(plug_dir) abort
         let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
         let record = s:make_record(plug_name, dir, a:url, 'git', ver)
         call s:do_record(record, vim_lockfile)
+        call s:info_msg(printf("Recorded the plugin info of '%s'.", plug_name))
+    elseif a:update
+        " Update version.
+        call s:do_unrecord_by_name(plug_name, vim_lockfile)
+        let dir = s:path_join(s:path_basename(a:vimbundle_dir), plug_name)
+        let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
+        let record = s:make_record(plug_name, dir, a:url, 'git', ver)
+        call s:do_record(plug_name, vim_lockfile)
+        call s:info_msg(printf("Updated the version of '%s' (%s -> %s).",
+        \               plug_name, old_record.version, record.version))
     else
-        " If the record is found, lock the version.
-        call s:git('--git-dir', git_dir, 'checkout', old_record.version)
+        " If the record is found and !a:update, lock the version.
+        call s:git('--git-dir', git_dir, '--work-tree', a:plug_dir,
+        \               'checkout', old_record.version)
+        if v:shell_error
+            throw printf("vivacious: 'git checkout %s' failed.",
+            \                               old_record.version)
+        endif
+        call s:info_msg(printf("Locked the version of '%s' (%s).",
+        \                   plug_name, old_record.version))
     endif
 endfunction
 
@@ -314,7 +331,7 @@ function! s:fetch_all_from_lockfile(lockfile) abort
             \       s:path_join(s:vim_dir(), record.dir))
             let vimbundle_dir = s:path_dirname(plug_dir)
             call s:install_git_plugin(record.url, 0, vimbundle_dir)
-            call s:update_record(plug_dir)
+            call s:update_record(plug_dir, 0)
         catch /vivacious: You already installed/
             " silently skip
         endtry
