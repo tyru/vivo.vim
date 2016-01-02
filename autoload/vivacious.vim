@@ -168,14 +168,24 @@ endfunction
 
 function! s:list(args) abort
     let lockfile = s:get_lockfile()
+    let vimbundle_dir = s:vimbundle_dir()
     for record in s:get_records_from_file(lockfile)
-        echomsg record.name
+        let plug_dir = s:path_join(vimbundle_dir, record.name)
+        if isdirectory(plug_dir)
+            echohl MoreMsg
+            echomsg record.name
+            echohl None
+        else
+            echohl WarningMsg
+            echomsg record.name . " (not fetched)"
+            echohl None
+        endif
         echomsg "  Directory: " . record.dir
         echomsg "  Type: " . record.type
         echomsg "  URL: " . record.url
         echomsg "  Version: " . record.version
     endfor
-    echomsg ''
+    echomsg ' '
     echomsg 'Listed managed plugins.'
 endfunction
 
