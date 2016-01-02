@@ -112,11 +112,18 @@ function! s:install_git_plugin(url, redraw) abort
         redraw    " before the last message
     endif
     call s:info_msg(printf("Installed a plugin '%s'.", plug_name))
-    " Record the plugin info.
+    " Record or Lock
+    let old_record = s:get_record_by_name(plug_name)
     let git_dir = s:path_join(plug_dir, '.git')
-    let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
-    let record = s:make_record(plug_name, plug_dir, a:url, 'git', ver)
-    call s:record_version(record)
+    if empty(old_record)
+        " If the record is not found, record the plugin info.
+        let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
+        let record = s:make_record(plug_name, plug_dir, a:url, 'git', ver)
+        call s:record_version(record)
+    else
+        " If the record is found, lock the version.
+        call s:git('--git-dir', git_dir, 'checkout', old_record.version)
+    endif
 endfunction
 
 function! s:cmd_install_help() abort
@@ -150,7 +157,7 @@ function! s:uninstall_plugin(plug_name, keep_record) abort
     let vimbundle_dir = s:vimbundle_dir()
     let plug_dir = s:path_join(vimbundle_dir, a:plug_name)
     let exists_dir = isdirectory(plug_dir)
-    let has_record = s:record_has_name_of(a:plug_name)
+    let has_record = s:has_record_name_of(a:plug_name)
     if !exists_dir && !has_record
         throw "vivacious: '" . a:plug_name . "' is not installed."
     endif
@@ -265,9 +272,6 @@ function! s:make_record(plug_name, plug_dir, url, type, version) abort
 endfunction
 
 function! s:record_version(record) abort
-    if s:record_has_name_of(a:record.name)
-        call s:unrecord_version_by_name(a:record.name)
-    endif
     let lockfile = s:get_lockfile()
     let lines = (filereadable(lockfile) ? readfile(lockfile) : [])
     call writefile(lines + [s:to_ltsv(a:record)], lockfile)
@@ -285,14 +289,14 @@ function! s:unrecord_version_by_name(plug_name) abort
     call writefile(lines, lockfile)
 endfunction
 
-function! s:record_has_name_of(name) abort
+function! s:get_record_by_name(name) abort
     let lockfile = s:get_lockfile()
-    if !filereadable(lockfile)
-        return 0
-    endif
-    let re = '\<name:' . a:name . '\>'
-    let line = get(filter(readfile(lockfile), 'v:val =~# re'), 0, s:NONE)
-    return (line isnot s:NONE)
+    let records = filter(s:get_records_from_file(lockfile), 'v:val.name ==# a:name')
+    return get(records, 0, {})
+endfunction
+
+function! s:has_record_name_of(name) abort
+    return !empty(s:get_record_by_name(a:name))
 endfunction
 
 function! s:get_records_from_file(lockfile) abort
