@@ -24,28 +24,7 @@ This plugin is designed for the following policies.
   * By default, a configuration file per a plugin is `~/.vim/bundleconfig/<plugin name>.vim`.
   * It also shouldn't be there! isn't it?
 
-
-# Features
-
-## `:VivaInstall`
-
-* From GitHub repository: `:VivaInstall tyru/open-browser.vim`
-* From Git repository URL(http,https,git): `:VivaInstall https://github.com/tyru/open-browser.vim`
-
-## `:VivaPurge`
-
-* `:VivaPurge open-browser.vim` removes both a plugin directory and a plugin info.
-
-## `:VivaRemove`
-
-* `:VivaRemove open-browser.vim` removes only a plugin directory.
-* After this command is executed, `:VivaFetchAll` can fetch a plugin directory again.
-
-## `:VivaList`
-
-* Lists managed plugins including not fetched plugins.
-
-Here is the `:VivaList` example.
+# How it works
 
 ```
 :VivaList
@@ -72,7 +51,71 @@ open-browser.vim
   Version: 61169d9c614cfead929be33b279e4e644d2c7c55
 
 Listed managed plugins.
+
+:VivaRemove open-browser.vim
+vivacious: Uninstalling the plugin 'open-browser.vim'... Done.
+
+:VivaList
+caw.vim
+  Directory: /home/tyru/.vim/bundle/caw.vim
+  Type: git
+  URL: https://github.com/tyru/caw.vim
+  Version: 6591ed28caef2d3175298818c5f38ce9ec692416
+open-browser.vim (not fetched)
+  Directory: /home/tyru/.vim/bundle/open-browser.vim
+  Type: git
+  URL: https://github.com/tyru/open-browser.vim
+  Version: 61169d9c614cfead929be33b279e4e644d2c7c55
+
+Listed managed plugins.
+
+:VivaPurge
+vivacious: Unrecording the plugin info of 'caw.vim'... Done.
+vivacious: Uninstalling the plugin 'caw.vim'... Done.
+
+:VivaList
+open-browser.vim (not fetched)                                                                                                                      
+  Directory: /home/tyru/.vim/bundle/open-browser.vim
+  Type: git
+  URL: https://github.com/tyru/open-browser.vim
+  Version: 61169d9c614cfead929be33b279e4e644d2c7c55
+
+Listed managed plugins.
+
+:VivaFetchAll
+vivacious: Fetching a plugin from 'https://github.com/tyru/open-browser.vim'... Done.
+vivacious: Installed a plugin 'open-browser.vim'.
+vivacious: VivaFetchAll: All plugins are installed!
+
+:VivaList
+open-browser.vim
+  Directory: /home/tyru/.vim/bundle/open-browser.vim
+  Type: git
+  URL: https://github.com/tyru/open-browser.vim
+  Version: 61169d9c614cfead929be33b279e4e644d2c7c55
+
+Listed managed plugins.
 ```
+
+# Features
+
+## `:VivaInstall`
+
+* From GitHub repository: `:VivaInstall tyru/open-browser.vim`
+* From Git repository URL(http,https,git): `:VivaInstall https://github.com/tyru/open-browser.vim`
+
+## `:VivaPurge`
+
+* `:VivaPurge open-browser.vim` removes both a plugin directory and a plugin info.
+
+## `:VivaRemove`
+
+* `:VivaRemove open-browser.vim` removes only a plugin directory.
+* After this command is executed, `:VivaFetchAll` can fetch a plugin directory again.
+
+## `:VivaList`
+
+* Lists managed plugins including not fetched plugins (See `How it works`).
 
 ## `:VivaFetchAll`
 
