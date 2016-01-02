@@ -20,8 +20,12 @@ function! vivacious#install(...)
     call s:call_with_error_handlers('s:install', a:000)
 endfunction
 
-function! vivacious#uninstall(...) abort
-    call s:call_with_error_handlers('s:uninstall', a:000)
+function! vivacious#remove(...) abort
+    call s:call_with_error_handlers('s:remove', a:000)
+endfunction
+
+function! vivacious#purge(...) abort
+    call s:call_with_error_handlers('s:purge', a:000)
 endfunction
 
 function! vivacious#list(...) abort
@@ -122,17 +126,27 @@ function! s:cmd_install_help() abort
     echo '       VivaInstall https://github.com/tyru/vivacious.vim'
 endfunction
 
-function! s:uninstall(args) abort
+function! s:remove(args) abort
     if len(a:args) ==# 0 || a:args[0] =~# '^\%(-h\|--help\)$'
-        return s:cmd_uninstall_help()
+        return s:cmd_remove_help()
     endif
     if len(a:args) !=# 1 || a:args[0] !~# '^[^/\\]\+$'
-        throw 'vivacious: VivaUninstall: invalid argument.'
+        throw 'vivacious: VivaRemove: invalid argument.'
     endif
-    call s:uninstall_plugin(a:args[0])
+    call s:uninstall_plugin(a:args[0], 1)
 endfunction
 
-function! s:uninstall_plugin(plug_name) abort
+function! s:purge(args) abort
+    if len(a:args) ==# 0 || a:args[0] =~# '^\%(-h\|--help\)$'
+        return s:cmd_purge_help()
+    endif
+    if len(a:args) !=# 1 || a:args[0] !~# '^[^/\\]\+$'
+        throw 'vivacious: VivaPurge: invalid argument.'
+    endif
+    call s:uninstall_plugin(a:args[0], 0)
+endfunction
+
+function! s:uninstall_plugin(plug_name, keep_record) abort
     let vimbundle_dir = s:vimbundle_dir()
     let plug_dir = s:path_join(vimbundle_dir, a:plug_name)
     let exists_dir = isdirectory(plug_dir)
@@ -141,7 +155,7 @@ function! s:uninstall_plugin(plug_name) abort
         throw "vivacious: '" . a:plug_name . "' is not installed."
     endif
     " Remove the plugin info.
-    if has_record
+    if has_record && !a:keep_record
         call s:info(printf("Unrecording the plugin info of '%s'...", a:plug_name))
         let git_dir = s:path_join(plug_dir, '.git')
         let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
@@ -160,10 +174,23 @@ function! s:uninstall_plugin(plug_name) abort
     endif
 endfunction
 
-function! s:cmd_uninstall_help() abort
+function! s:cmd_remove_help() abort
     echo ''
-    echo 'Usage: VivaUninstall <plugin name in bundle dir>'
-    echo '       VivaUninstall vivacious.vim'
+    echo 'Usage: VivaRemove <plugin name in bundle dir>'
+    echo '       VivaRemove vivacious.vim'
+    echo ''
+    echo ':VivaRemove removes only a plugin directory.'
+    echo 'It keeps a plugin info.'
+    echo 'After this command is executed, :VivaFetchAll can fetch a plugin directory again.'
+endfunction
+
+function! s:cmd_purge_help() abort
+    echo ''
+    echo 'Usage: VivaPurge <plugin name in bundle dir>'
+    echo '       VivaPurge vivacious.vim'
+    echo ''
+    echo ':VivaPurge removes both a plugin directory and a plugin info.'
+    echo ':VivaFetchAll doesn''t help, all data about specified plugin are gone.'
 endfunction
 
 function! s:list(args) abort

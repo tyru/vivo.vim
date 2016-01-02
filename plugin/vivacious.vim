@@ -17,7 +17,9 @@ endif
 command! -bar -nargs=*
 \   VivaInstall call vivacious#install(<f-args>)
 command! -bar -nargs=*
-\   VivaUninstall call vivacious#uninstall(<f-args>)
+\   VivaRemove call vivacious#remove(<f-args>)
+command! -bar -nargs=*
+\   VivaPurge call vivacious#purge(<f-args>)
 command! -bar -nargs=*
 \   VivaList call vivacious#list(<f-args>)
 command! -bar -nargs=*
