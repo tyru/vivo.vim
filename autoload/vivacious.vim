@@ -91,16 +91,20 @@ function! s:install_github_plugin(arg) abort
     return s:install_git_plugin('https://github.com/' . a:arg, 1)
 endfunction
 
-function! s:install_git_plugin(url, redraw) abort
-    let vimbundle_dir = s:vimbundle_dir()
-    if !isdirectory(vimbundle_dir)
-        call s:mkdir_p(vimbundle_dir)
-    endif
+function! s:install_git_plugin(url, redraw, ...) abort
     let plug_name = matchstr(a:url, '[^/]\+\%(\.git\)\?$')
     if plug_name ==# ''
         throw 'vivacious: Invalid URL(' . a:url . ')'
     endif
-    let plug_dir = s:path_join(vimbundle_dir, plug_name)
+    let rel_plug_dir = (a:0 ? a:1 : s:path_join('bundle', plug_name))
+    let vimbundle_dir = s:path_dirname(rel_plug_dir)
+    if !isdirectory(vimbundle_dir)
+        call s:mkdir_p(vimbundle_dir)
+    endif
+    " If plug_dir is relative path, concat to vimbundle_dir.
+    let plug_dir = (rel_plug_dir =~# '^[/\\]' ?
+    \                            rel_plug_dir :
+    \       s:path_join(s:vim_dir(), rel_plug_dir))
     if isdirectory(plug_dir)
         throw "vivacious: You already installed '" . plug_name . "'. "
         \   . "Please uninstall it by "
@@ -122,7 +126,7 @@ function! s:install_git_plugin(url, redraw) abort
     if empty(old_record)
         " If the record is not found, record the plugin info.
         let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
-        let record = s:make_record(plug_name, plug_dir, a:url, 'git', ver)
+        let record = s:make_record(plug_name, rel_plug_dir, a:url, 'git', ver)
         call s:record_version(record)
     else
         " If the record is found, lock the version.
@@ -255,9 +259,7 @@ function! s:fetch_all_from_lockfile(lockfile) abort
     let vimbundle_dir = s:vimbundle_dir()
     for record in s:get_records_from_file(a:lockfile)
         try
-            " XXX: Need to clone into record.plug_dir
-            " if bundle dir was changed?
-            call s:install_git_plugin(record.url, 0)
+            call s:install_git_plugin(record.url, 0, record.dir)
         catch /vivacious: You already installed/
             " silently skip
         endtry
@@ -446,6 +448,11 @@ endfunction
 let s:PATH_SEP = s:is_windows ? '\' : '/'
 function! s:path_join(...) abort
     return join(a:000, s:PATH_SEP)
+endfunction
+
+function! s:path_dirname(path) abort
+    let path = substitute(a:path, '[/\\]\+$', '', '')
+    return fnamemodify(path, ':h')
 endfunction
 
 " TODO: Support older vim
