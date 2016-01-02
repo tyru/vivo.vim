@@ -28,10 +28,9 @@ endfunction
 
 function! vivacious#__complete_remove__(arglead, cmdline, cursorpos) abort
     if a:cmdline !~# '^[A-Z]\w*\s\+.\+$' || a:arglead ==# ''
-        let lockfile = s:get_lockfile()
-        return map(s:get_records_from_file(lockfile), 'v:val.name')
+        return map(s:get_records_from_file(s:get_lockfile()), 'v:val.name')
     endif
-    return s:expand_plug_name(a:arglead)
+    return s:expand_plug_name(a:arglead, s:get_lockfile())
 endfunction
 
 function! vivacious#purge(...) abort
@@ -81,38 +80,35 @@ function! s:install(args) abort
         return s:cmd_install_help()
     endif
     if len(a:args) !=# 1
-        throw 'vivacious: VivaInstall: invalid argument.'
+        throw 'vivacious: VivaInstall: too few or too many arguments.'
     endif
     if a:args[0] =~# '^[^/]\+/[^/]\+$'
         " 'tyru/vivacious.vim'
-        call s:install_github_plugin(a:args[0])
+        call s:install_github_plugin(a:args[0], s:get_lockfile())
     elseif a:args[0] =~# '^\%(http\s\?\|git\)://'
         " 'https://github.com/tyru/vivacious.vim'
-        call s:install_git_plugin(a:args[0], 1)
+        call s:install_git_plugin(a:args[0], 1,
+        \                         s:vimbundle_dir(), s:get_lockfile())
     else
-        throw 'vivacious: VivaInstall: invalid argument.'
+        throw 'vivacious: VivaInstall: invalid arguments.'
     endif
 endfunction
 
 " @param arg 'tyru/vivacious.vim'
-function! s:install_github_plugin(arg) abort
-    return s:install_git_plugin('https://github.com/' . a:arg, 1)
+function! s:install_github_plugin(arg, lockfile) abort
+    return s:install_git_plugin('https://github.com/' . a:arg, 1,
+    \                           s:vimbundle_dir(), a:lockfile)
 endfunction
 
-function! s:install_git_plugin(url, redraw, ...) abort
+function! s:install_git_plugin(url, redraw, vimbundle_dir, lockfile) abort
     let plug_name = matchstr(a:url, '[^/]\+\%(\.git\)\?$')
     if plug_name ==# ''
         throw 'vivacious: Invalid URL(' . a:url . ')'
     endif
-    let rel_plug_dir = (a:0 ? a:1 : s:path_join('bundle', plug_name))
-    let vimbundle_dir = s:path_dirname(rel_plug_dir)
-    if !isdirectory(vimbundle_dir)
-        call s:mkdir_p(vimbundle_dir)
+    if !isdirectory(a:vimbundle_dir)
+        call s:mkdir_p(a:vimbundle_dir)
     endif
-    " If plug_dir is relative path, concat to vimbundle_dir.
-    let plug_dir = (rel_plug_dir =~# '^[/\\]' ?
-    \                            rel_plug_dir :
-    \       s:path_join(s:vim_dir(), rel_plug_dir))
+    let plug_dir = s:path_join(a:vimbundle_dir, plug_name)
     if isdirectory(plug_dir)
         throw "vivacious: You already installed '" . plug_name . "'. "
         \   . "Please uninstall it by "
@@ -128,14 +124,14 @@ function! s:install_git_plugin(url, redraw, ...) abort
     endif
     call s:info_msg(printf("Installed a plugin '%s'.", plug_name))
     " Record or Lock
-    let lockfile = s:get_lockfile()
-    let old_record = s:get_record_by_name(plug_name)
+    let old_record = s:get_record_by_name(plug_name, a:lockfile)
     let git_dir = s:path_join(plug_dir, '.git')
     if empty(old_record)
         " If the record is not found, record the plugin info.
         let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
-        let record = s:make_record(plug_name, rel_plug_dir, a:url, 'git', ver)
-        call s:record_version(record)
+        let dir = s:path_join(s:path_basename(a:vimbundle_dir), plug_name)
+        let record = s:make_record(plug_name, dir, a:url, 'git', ver)
+        call s:do_record(record, a:lockfile)
     else
         " If the record is found, lock the version.
         call s:git('--git-dir', git_dir, 'checkout', old_record.version)
@@ -156,7 +152,7 @@ function! s:remove(args) abort
     if len(a:args) !=# 1 || a:args[0] !~# '^[^/\\]\+$'
         throw 'vivacious: VivaRemove: invalid argument.'
     endif
-    call s:uninstall_plugin_wildcard(a:args[0], 1)
+    call s:uninstall_plugin_wildcard(a:args[0], 1, s:get_lockfile())
 endfunction
 
 function! s:purge(args) abort
@@ -166,11 +162,11 @@ function! s:purge(args) abort
     if len(a:args) !=# 1 || a:args[0] !~# '^[^/\\]\+$'
         throw 'vivacious: VivaPurge: invalid argument.'
     endif
-    call s:uninstall_plugin_wildcard(a:args[0], 0)
+    call s:uninstall_plugin_wildcard(a:args[0], 0, s:get_lockfile())
 endfunction
 
-function! s:uninstall_plugin_wildcard(wildcard, keep_record) abort
-    let plug_name_list = s:expand_plug_name(a:wildcard)
+function! s:uninstall_plugin_wildcard(wildcard, keep_record, lockfile) abort
+    let plug_name_list = s:expand_plug_name(a:wildcard, a:lockfile)
     let redraw = (len(plug_name_list) >=# 2 ? 0 : 1)
     if len(plug_name_list) >=# 2
         echo join(map(copy(plug_name_list), '"* " . v:val'), "\n")
@@ -180,27 +176,27 @@ function! s:uninstall_plugin_wildcard(wildcard, keep_record) abort
         echon "\n"
     endif
     for plug_name in plug_name_list
-        call s:uninstall_plugin(plug_name, a:keep_record, redraw)
+        call s:uninstall_plugin(plug_name, a:keep_record, redraw, a:lockfile)
     endfor
 endfunction
 
-function! s:expand_plug_name(wildcard) abort
+function! s:expand_plug_name(wildcard, lockfile) abort
     if a:wildcard !~# '[*?]'
         return [a:wildcard]
     endif
-    let lockfile = s:get_lockfile()
-    let candidates = map(s:get_records_from_file(lockfile), 'v:val.name')
+    let records = s:get_records_from_file(a:lockfile)
+    let candidates = map(records, 'v:val.name')
     " wildcard -> regexp
     let re = substitute(a:wildcard, '\*', '.*', 'g')
     let re = substitute(re, '?', '.', 'g')
     return filter(candidates, 'v:val =~# re')
 endfunction
 
-function! s:uninstall_plugin(plug_name, keep_record, redraw) abort
+function! s:uninstall_plugin(plug_name, keep_record, redraw, lockfile) abort
     let vimbundle_dir = s:vimbundle_dir()
     let plug_dir = s:path_join(vimbundle_dir, a:plug_name)
     let exists_dir = isdirectory(plug_dir)
-    let has_record = s:has_record_name_of(a:plug_name)
+    let has_record = s:has_record_name_of(a:plug_name, a:lockfile)
     if !exists_dir && !has_record
         throw "vivacious: '" . a:plug_name . "' is not installed."
     endif
@@ -209,7 +205,7 @@ function! s:uninstall_plugin(plug_name, keep_record, redraw) abort
         call s:info(printf("Unrecording the plugin info of '%s'...", a:plug_name))
         let git_dir = s:path_join(plug_dir, '.git')
         let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
-        call s:unrecord_version_by_name(a:plug_name)
+        call s:do_unrecord_by_name(a:plug_name, a:lockfile)
         if !exists_dir && a:redraw
             redraw    " before the last message
         endif
@@ -246,9 +242,8 @@ function! s:cmd_purge_help() abort
 endfunction
 
 function! s:list(args) abort
-    let lockfile = s:get_lockfile()
     let vimbundle_dir = s:vimbundle_dir()
-    let records = s:get_records_from_file(lockfile)
+    let records = s:get_records_from_file(s:get_lockfile())
     if empty(records)
         echomsg 'No plugins are installed.'
         return
@@ -296,7 +291,12 @@ function! s:fetch_all_from_lockfile(lockfile) abort
     let vimbundle_dir = s:vimbundle_dir()
     for record in s:get_records_from_file(a:lockfile)
         try
-            call s:install_git_plugin(record.url, 0, record.dir)
+            " If plug_dir is relative path, concat to vimbundle_dir.
+            let plug_dir = (record.dir =~# '^[/\\]' ?
+            \                            record.dir :
+            \       s:path_join(s:vim_dir(), record.dir))
+            let vimbundle_dir = s:path_dirname(plug_dir)
+            call s:install_git_plugin(record.url, 0, vimbundle_dir, a:lockfile)
         catch /vivacious: You already installed/
             " silently skip
         endtry
@@ -312,30 +312,25 @@ function! s:cmd_fetch_all_help() abort
     echo 'If no arguments are given, ~/.vim/Vivacious.lock is used.'
 endfunction
 
-function! s:make_record(plug_name, plug_dir, url, type, version) abort
-    return {'name': a:plug_name,
-    \       'dir': a:plug_dir,
-    \       'url': a:url,
-    \       'type': a:type,
-    \       'version': a:version}
+function! s:make_record(name, dir, url, type, version) abort
+    return {'name': a:name, 'dir': a:dir, 'url': a:url,
+    \       'type': a:type, 'version': a:version}
 endfunction
 
-function! s:record_version(record) abort
-    let lockfile = s:get_lockfile()
-    let lines = s:read_lockfile(lockfile)
-    call s:write_lockfile(lines + [s:to_ltsv(a:record)], lockfile)
+function! s:do_record(record, lockfile) abort
+    let lines = s:read_lockfile(a:lockfile)
+    call s:write_lockfile(lines + [s:to_ltsv(a:record)], a:lockfile)
 endfunction
 
 " If lockfile doesn't exist, treat it as empty file.
-function! s:unrecord_version_by_name(plug_name) abort
-    let lockfile = s:get_lockfile()
-    if !filereadable(lockfile)
+function! s:do_unrecord_by_name(plug_name, lockfile) abort
+    if !filereadable(a:lockfile)
         return
     endif
     " Get rid of the plugin info record which has a name of a:plug_name.
     let re = '\<name:' . a:plug_name . '\>'
-    let lines = filter(s:read_lockfile(lockfile), 'v:val !~# re')
-    call s:write_lockfile(lines, lockfile)
+    let lines = filter(s:read_lockfile(a:lockfile), 'v:val !~# re')
+    call s:write_lockfile(lines, a:lockfile)
 endfunction
 
 " If lockfile doesn't exist, treat it as empty file.
@@ -347,14 +342,13 @@ function! s:write_lockfile(lines, lockfile) abort
     return writefile(["version:" . s:LOCKFILE_VERSION] + a:lines, a:lockfile)
 endfunction
 
-function! s:get_record_by_name(name) abort
-    let lockfile = s:get_lockfile()
-    let records = filter(s:get_records_from_file(lockfile), 'v:val.name ==# a:name')
+function! s:get_record_by_name(name, lockfile) abort
+    let records = filter(s:get_records_from_file(a:lockfile), 'v:val.name ==# a:name')
     return get(records, 0, {})
 endfunction
 
-function! s:has_record_name_of(name) abort
-    return !empty(s:get_record_by_name(a:name))
+function! s:has_record_name_of(name, lockfile) abort
+    return !empty(s:get_record_by_name(a:name, a:lockfile))
 endfunction
 
 " If lockfile doesn't exist, treat it as empty file.
@@ -485,6 +479,11 @@ endfunction
 let s:PATH_SEP = s:is_windows ? '\' : '/'
 function! s:path_join(...) abort
     return join(a:000, s:PATH_SEP)
+endfunction
+
+function! s:path_basename(path) abort
+    let path = substitute(a:path, '[/\\]\+$', '', '')
+    return fnamemodify(path, ':t')
 endfunction
 
 function! s:path_dirname(path) abort
