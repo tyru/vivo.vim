@@ -335,7 +335,10 @@ endfunction
 
 " If lockfile doesn't exist, treat it as empty file.
 function! s:read_lockfile(lockfile) abort
-    return filereadable(a:lockfile) ? readfile(a:lockfile)[1:] : []
+    if !filereadable(a:lockfile)
+        return []
+    endif
+    return filter(readfile(a:lockfile)[1:], '!empty(v:val)')
 endfunction
 
 function! s:write_lockfile(lines, lockfile) abort
@@ -356,7 +359,8 @@ function! s:get_records_from_file(lockfile) abort
     if !filereadable(a:lockfile)
         return []
     endif
-    return map(s:read_lockfile(a:lockfile), 's:parse_ltsv(v:val)')
+    let records = map(s:read_lockfile(a:lockfile), 's:parse_ltsv(v:val)')
+    return filter(records, '!empty(v:val)')
 endfunction
 
 " http://ltsv.org/
