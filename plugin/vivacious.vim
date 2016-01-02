@@ -15,11 +15,11 @@ if !executable('git')
 endif
 
 command! -bar -nargs=*
-\   VivaInstall call vivacious#install([<f-args>])
+\   VivaInstall call vivacious#install(<f-args>)
 command! -bar -nargs=*
-\   VivaUninstall call vivacious#uninstall([<f-args>])
+\   VivaUninstall call vivacious#uninstall(<f-args>)
 command! -bar -nargs=*
-\   VivaFetchAll call vivacious#fetch_all([<f-args>])
+\   VivaFetchAll call vivacious#fetch_all(<f-args>)
 
 let &cpo = s:save_cpo
 unlet s:save_cpo

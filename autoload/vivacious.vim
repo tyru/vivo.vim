@@ -16,16 +16,16 @@ function! vivacious#bundle(...)
     endfor
 endfunction
 
-function! vivacious#install(args)
-    call s:call_with_error_handlers('s:install', a:args)
+function! vivacious#install(...)
+    call s:call_with_error_handlers('s:install', a:000)
 endfunction
 
-function! vivacious#uninstall(args) abort
-    call s:call_with_error_handlers('s:uninstall', a:args)
+function! vivacious#uninstall(...) abort
+    call s:call_with_error_handlers('s:uninstall', a:000)
 endfunction
 
-function! vivacious#fetch_all(args) abort
-    call s:call_with_error_handlers('s:fetch_all', a:args)
+function! vivacious#fetch_all(...) abort
+    call s:call_with_error_handlers('s:fetch_all', a:000)
 endfunction
 
 
