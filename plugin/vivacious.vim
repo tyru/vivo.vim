@@ -19,6 +19,8 @@ command! -bar -nargs=*
 command! -bar -nargs=*
 \   VivaUninstall call vivacious#uninstall(<f-args>)
 command! -bar -nargs=*
+\   VivaList call vivacious#list(<f-args>)
+command! -bar -nargs=*
 \   VivaFetchAll call vivacious#fetch_all(<f-args>)
 
 let &cpo = s:save_cpo

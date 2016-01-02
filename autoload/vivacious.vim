@@ -24,6 +24,10 @@ function! vivacious#uninstall(...) abort
     call s:call_with_error_handlers('s:uninstall', a:000)
 endfunction
 
+function! vivacious#list(...) abort
+    call s:call_with_error_handlers('s:list', a:000)
+endfunction
+
 function! vivacious#fetch_all(...) abort
     call s:call_with_error_handlers('s:fetch_all', a:000)
 endfunction
@@ -69,7 +73,7 @@ function! s:install(args) abort
         call s:install_github_plugin(a:args[0])
     elseif a:args[0] =~# '^\%(http\s\?\|git\)://'
         " 'https://github.com/tyru/vivacious.vim'
-        call s:install_git_plugin(a:args[0], 1, 0)
+        call s:install_git_plugin(a:args[0], 1)
     else
         throw 'vivacious: VivaInstall: invalid argument.'
     endif
@@ -77,10 +81,10 @@ endfunction
 
 " @param arg 'tyru/vivacious.vim'
 function! s:install_github_plugin(arg) abort
-    return s:install_git_plugin('https://github.com/' . a:arg, 1, 0)
+    return s:install_git_plugin('https://github.com/' . a:arg, 1)
 endfunction
 
-function! s:install_git_plugin(url, redraw, ignore_dup) abort
+function! s:install_git_plugin(url, redraw) abort
     let vimbundle_dir = s:vimbundle_dir()
     if !isdirectory(vimbundle_dir)
         call s:mkdir_p(vimbundle_dir)
@@ -108,7 +112,7 @@ function! s:install_git_plugin(url, redraw, ignore_dup) abort
     let git_dir = s:path_join(plug_dir, '.git')
     let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
     let record = s:make_record(plug_name, plug_dir, a:url, 'git', ver)
-    call s:record_version(record, a:ignore_dup)
+    call s:record_version(record)
 endfunction
 
 function! s:cmd_install_help() abort
@@ -153,6 +157,19 @@ function! s:cmd_uninstall_help() abort
     echo '       VivaUninstall vivacious.vim'
 endfunction
 
+function! s:list(args) abort
+    let lockfile = s:get_lockfile()
+    for record in s:get_records_from_file(lockfile)
+        echomsg record.name
+        echomsg "  Directory: " . record.dir
+        echomsg "  Type: " . record.type
+        echomsg "  URL: " . record.url
+        echomsg "  Version: " . record.version
+    endfor
+    echomsg ''
+    echomsg 'Listed managed plugins.'
+endfunction
+
 function! s:fetch_all(args) abort
     if len(a:args) >= 1 && a:args[0] =~# '^\%(-h\|--help\)$'
         return s:cmd_fetch_all_help()
@@ -170,7 +187,7 @@ function! s:fetch_all_from_lockfile(lockfile) abort
     for record in s:get_records_from_file(a:lockfile)
         " XXX: Need to clone into record.plug_dir
         " if bundle dir was changed?
-        call s:install_git_plugin(record.url, 0, 1)
+        call s:install_git_plugin(record.url, 0)
     endfor
     call s:info_msg('VivaFetchAll: All plugins are installed!')
 endfunction
@@ -191,10 +208,9 @@ function! s:make_record(plug_name, plug_dir, url, type, version) abort
     \       'version': a:version}
 endfunction
 
-function! s:record_version(record, ignore_dup) abort
-    if !a:ignore_dup && s:record_has_name_of(a:record.name)
-        " This should be checked at earlier time!
-        throw "vivacious: fatal: '" . a:record.name . "' is already recorded."
+function! s:record_version(record) abort
+    if s:record_has_name_of(a:record.name)
+        call s:unrecord_version_by_name(a:record.name)
     endif
     let line = s:to_ltsv(a:record)
     let lockfile = s:get_lockfile()
