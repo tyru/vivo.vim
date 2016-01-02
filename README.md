@@ -39,7 +39,7 @@ No plugins are installed.
 vivacious: Fetching a plugin from 'https://github.com/tyru/caw.vim'... Done.
 vivacious: Installed a plugin 'caw.vim'.
 
-:VivaInstall tyru/caw.vim
+:VivaInstall tyru/open-browser.vim
 vivacious: Fetching a plugin from 'https://github.com/tyru/open-browser.vim'... Done.
 vivacious: Installed a plugin 'open-browser.vim'.
 
