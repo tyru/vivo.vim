@@ -51,6 +51,8 @@ endfunction
 let s:is_windows = has('win16') || has('win32') || has('win64') || has('win95')
 let s:is_unix = has('unix')
 let s:NONE = []
+let s:GIT_URL_RE  = '^\%(https\?\|git\)://'
+let s:HTTP_URL_RE = '^https\?://'
 
 function! s:call_with_error_handlers(mainfunc, args, helpfunc) abort
     try
@@ -85,7 +87,7 @@ function! s:install(args) abort
     if a:args[0] =~# '^[^/]\+/[^/]\+$'
         " 'tyru/vivacious.vim'
         call s:install_github_plugin(a:args[0])
-    elseif a:args[0] =~# '^\%(http\s\?\|git\)://'
+    elseif a:args[0] =~# s:GIT_URL_RE
         " 'https://github.com/tyru/vivacious.vim'
         call s:install_git_plugin(a:args[0], 1, s:vimbundle_dir())
     else
@@ -280,6 +282,11 @@ function! s:fetch_all(args) abort
         return s:cmd_fetch_all_help()
     endif
     let lockfile = (len(a:args) >= 1 ? expand(a:args[0]) : s:get_lockfile())
+    if lockfile =~# s:HTTP_URL_RE
+        let content = s:http_get(lockfile)
+        let lockfile = tempname()
+        call writefile(split(content, '\r\?\n', 1), lockfile)
+    endif
     call s:fetch_all_from_lockfile(lockfile)
 endfunction
 
@@ -310,6 +317,17 @@ function! s:cmd_fetch_all_help() abort
     echo '       VivaFetchAll /path/to/Vivacious.lock'
     echo ' '
     echo 'If no arguments are given, ~/.vim/Vivacious.lock is used.'
+endfunction
+
+function! s:http_get(url) abort
+    if executable('curl')
+        return system('curl -L -s -k ' . shellescape(a:url))
+    elseif executable('wget')
+        return system('wget -q -L -O - ' . shellescape(a:url))
+    else
+        throw 'vivacious: s:http_get(): '
+        \   . 'you doesn''t have curl nor wget.'
+    endif
 endfunction
 
 function! s:make_record(name, dir, url, type, version) abort
