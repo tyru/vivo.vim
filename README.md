@@ -16,13 +16,15 @@ This plugin is designed for the following policies.
   * `:VivaPurge open-browser.vim`
   * `:VivaRemove open-browser.vim`
 3. I don't want to write plugins' names in .vimrc by hand!
-  * Okay, vivacious manages all stuffs about plugins.
+  * Okay, leave all stuffs about plugin management to vivacious.
     You don't need to concern about them.
   * It shouldn't be there(.vimrc)!!!
 4. I don't want to write plugins' configurations in .vimrc, too! (TODO)
-  * It is **painful** to remove the configurations by hand if you uninstall a plugin...
+  * It is **painful** to remove the configurations by hand after you uninstall a plugin...
   * By default, a configuration file per a plugin is `~/.vim/bundleconfig/<plugin name>.vim`.
   * It also shouldn't be there! isn't it?
+5. Keep It Simple, Stupid
+  * Vivacious doesn't slow down your vim startup, and not support any features not in this policies.
 
 # How it works
 
@@ -160,7 +162,7 @@ if has('vim_starting')
   set rtp+=~/.vim/bundle/vivacious.vim
   " If you want to fetch vivacious.vim automatically...
   " if !isdirectory(expand('~/.vim/bundle/vivacious.vim'))
-  "   call system('mkdir -p ~/.vim/bundle/vivacious.vim')
+  "   call system('mkdir -p ~/.vim/bundle/')
   "   call system('git clone https://github.com/tyru/vivacious.vim.git ~/.vim/bundle/vivacious.vim')
   " end
 endif
