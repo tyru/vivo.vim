@@ -3,6 +3,19 @@ scriptencoding utf-8
 let s:save_cpo = &cpo
 set cpo&vim
 
+function! vivacious#bundle(...)
+    let vimbundle_dir = (a:0 ? a:1 : s:vimbundle_dir())
+    if !isdirectory(vimbundle_dir)
+        " No plugins are installed... silently ignore.
+        return
+    endif
+    for plug_dir in s:glob(s:path_join(vimbundle_dir, '*'))
+        if isdirectory(plug_dir)
+            let &rtp = join([&rtp, plug_dir], ',')
+        endif
+    endfor
+endfunction
+
 function! vivacious#install(args)
     try
         call s:install(a:args)
