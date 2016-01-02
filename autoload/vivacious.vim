@@ -24,6 +24,10 @@ function! vivacious#uninstall(args) abort
     call s:call_with_error_handlers('s:uninstall', a:args)
 endfunction
 
+function! vivacious#fetch_all(args) abort
+    call s:call_with_error_handlers('s:fetch_all', a:args)
+endfunction
+
 
 
 let s:is_windows = has('win16') || has('win32') || has('win64') || has('win95')
@@ -65,7 +69,7 @@ function! s:install(args) abort
         call s:install_github_plugin(a:args[0])
     elseif a:args[0] =~# '^\%(http\s\?\|git\)://'
         " 'https://github.com/tyru/vivacious.vim'
-        call s:install_git_plugin(a:args[0])
+        call s:install_git_plugin(a:args[0], 1, 0)
     else
         throw 'vivacious: VivaInstall: invalid argument.'
     endif
@@ -73,10 +77,10 @@ endfunction
 
 " @param arg 'tyru/vivacious.vim'
 function! s:install_github_plugin(arg) abort
-    return s:install_git_plugin('https://github.com/' . a:arg)
+    return s:install_git_plugin('https://github.com/' . a:arg, 1, 0)
 endfunction
 
-function! s:install_git_plugin(url) abort
+function! s:install_git_plugin(url, redraw, ignore_dup) abort
     let vimbundle_dir = s:vimbundle_dir()
     if !isdirectory(vimbundle_dir)
         call s:mkdir_p(vimbundle_dir)
@@ -96,12 +100,15 @@ function! s:install_git_plugin(url) abort
     call s:git('clone', a:url, plug_dir)
     call s:info_msg(printf("Fetching a plugin from '%s'... Done.", a:url))
     call s:source_plugin(plug_dir)
-    redraw
+    if a:redraw
+        redraw
+    endif
     call s:info_msg(printf("Installed a plugin '%s'.", plug_name))
     " Record the plugin info.
     let git_dir = s:path_join(plug_dir, '.git')
     let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
-    call s:record_version(plug_name, plug_dir, a:url, 'git', ver)
+    let record = s:make_record(plug_name, plug_dir, a:url, 'git', ver)
+    call s:record_version(record, a:ignore_dup)
 endfunction
 
 function! s:cmd_install_help() abort
@@ -146,16 +153,50 @@ function! s:cmd_uninstall_help() abort
     echo '       VivaUninstall vivacious.vim'
 endfunction
 
-function! s:record_version(plug_name, plug_dir, url, type, version) abort
-    if s:record_has_name_of(a:plug_name)
-        " This should be checked at earlier time!
-        throw "vivacious: fatal: '" . a:plug_name . "' is already recorded."
+function! s:fetch_all(args) abort
+    if len(a:args) >= 1 && a:args[0] =~# '^\%(-h\|--help\)$'
+        return s:cmd_fetch_all_help()
     endif
-    let line = s:to_ltsv({'name': a:plug_name,
-    \                     'dir': a:plug_dir,
-    \                     'url': a:url,
-    \                     'type': a:type,
-    \                     'version': a:version})
+    let lockfile = (a:0 ? a:1 : s:get_lockfile())
+    call s:fetch_all_from_lockfile(lockfile)
+endfunction
+
+function! s:fetch_all_from_lockfile(lockfile) abort
+    if !filereadable(a:lockfile)
+        throw "vivacious: Specified lockfile doesn't exist. "
+        \   . '(' . a:lockfile . ')'
+    endif
+    let vimbundle_dir = s:vimbundle_dir()
+    for record in s:get_records_from_file(a:lockfile)
+        " XXX: Need to clone into record.plug_dir
+        " if bundle dir was changed?
+        call s:install_git_plugin(record.url, 0, 1)
+    endfor
+    call s:info_msg('VivaFetchAll: All plugins are installed!')
+endfunction
+
+function! s:cmd_fetch_all_help() abort
+    echo ''
+    echo 'Usage: VivaFetchAll [<Vivacious.lock>]'
+    echo '       VivaFetchAll /path/to/Vivacious.lock'
+    echo ''
+    echo 'If no arguments are given, ~/.vim/Vivacious.lock is used.'
+endfunction
+
+function! s:make_record(plug_name, plug_dir, url, type, version) abort
+    return {'name': a:plug_name,
+    \       'dir': a:plug_dir,
+    \       'url': a:url,
+    \       'type': a:type,
+    \       'version': a:version}
+endfunction
+
+function! s:record_version(record, ignore_dup) abort
+    if !a:ignore_dup && s:record_has_name_of(a:record.name)
+        " This should be checked at earlier time!
+        throw "vivacious: fatal: '" . a:record.name . "' is already recorded."
+    endif
+    let line = s:to_ltsv(a:record)
     let lockfile = s:get_lockfile()
     call s:append_file(line, lockfile)
 endfunction
@@ -181,9 +222,36 @@ function! s:record_has_name_of(name) abort
     return (line isnot s:NONE)
 endfunction
 
+function! s:get_records_from_file(lockfile) abort
+    if !filereadable(a:lockfile)
+        " This should be checked at earlier time!
+        throw "vivacious: fatal: s:get_records_from_file(): "
+        \   . "Specified lockfile doesn't exist. "
+        \   . '(' . a:lockfile . ')'
+    endif
+    return map(readfile(a:lockfile), 's:parse_ltsv(v:val)')
+endfunction
+
 " http://ltsv.org/
 function! s:to_ltsv(dict) abort
     return join(values(map(a:dict, 'v:key . ":" . v:val')), "\t")
+endfunction
+
+function! s:parse_ltsv(line) abort
+    let dict = {}
+    let re = '^\([^:]\+\):\(.*\)'
+    for line in split(a:line, '\t')
+        if line ==# ''
+            continue
+        endif
+        let m = matchlist(line, re)
+        if empty(m)
+            throw "vivacious: fatal: s:parse_ltsv(): Vivacious.lock file is corrupted."
+        endif
+        let dict[m[1]] = m[2]
+    endfor
+    " TODO: Validate keys/values?
+    return dict
 endfunction
 
 function! s:delete_dir(dir) abort
