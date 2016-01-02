@@ -196,7 +196,13 @@ endfunction
 function! s:list(args) abort
     let lockfile = s:get_lockfile()
     let vimbundle_dir = s:vimbundle_dir()
-    for record in s:get_records_from_file(lockfile)
+    let records = filereadable(lockfile) ?
+    \               s:get_records_from_file(lockfile) : []
+    if empty(records)
+        echomsg 'No plugins are installed.'
+        return
+    endif
+    for record in records
         let plug_dir = s:path_join(vimbundle_dir, record.name)
         if isdirectory(plug_dir)
             echohl MoreMsg
@@ -262,9 +268,9 @@ function! s:record_version(record) abort
     if s:record_has_name_of(a:record.name)
         call s:unrecord_version_by_name(a:record.name)
     endif
-    let line = s:to_ltsv(a:record)
     let lockfile = s:get_lockfile()
-    call s:append_file(line, lockfile)
+    let lines = (filereadable(lockfile) ? readfile(lockfile) : [])
+    call writefile(lines + [s:to_ltsv(a:record)], lockfile)
 endfunction
 
 function! s:unrecord_version_by_name(plug_name) abort
@@ -366,16 +372,6 @@ else
       \   . 'your platform is not supported'
   endfunction
 endif
-
-" TODO: Support older vim
-function! s:append_file(line, file) abort
-    if a:line =~# '\n'
-        throw 'vivacious: fatal: s:append_file(): '
-        \   . 'line must not contain newline(s)!'
-    endif
-    let lines = (filereadable(a:file) ? readfile(a:file) : [])
-    call writefile(lines + [a:line], a:file, 'a')
-endfunction
 
 " Add to runtimepath.
 " And source 'plugin' directory.
