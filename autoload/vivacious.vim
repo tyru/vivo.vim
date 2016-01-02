@@ -27,18 +27,11 @@ function! vivacious#remove(...) abort
 endfunction
 
 function! vivacious#__complete_remove__(arglead, cmdline, cursorpos) abort
-    let lockfile = s:get_lockfile()
-    let candidates = map(s:get_records_from_file(lockfile), 'v:val.name')
-    if a:cmdline !~# '^[A-Z]\w*\s\+.\+$'    " no args
-        return candidates
+    if a:cmdline !~# '^[A-Z]\w*\s\+.\+$' || a:arglead ==# ''
+        let lockfile = s:get_lockfile()
+        return map(s:get_records_from_file(lockfile), 'v:val.name')
     endif
-    if a:arglead ==# ''    " ?
-        return candidates
-    endif
-    " wildcard -> regexp
-    let arglead = substitute(a:arglead, '\*', '.*', 'g')
-    let arglead = substitute(arglead, '?', '.', 'g')
-    return filter(candidates, 'v:val =~# arglead')
+    return s:expand_plug_name(a:arglead)
 endfunction
 
 function! vivacious#purge(...) abort
@@ -163,7 +156,7 @@ function! s:remove(args) abort
     if len(a:args) !=# 1 || a:args[0] !~# '^[^/\\]\+$'
         throw 'vivacious: VivaRemove: invalid argument.'
     endif
-    call s:uninstall_plugin(a:args[0], 1)
+    call s:uninstall_plugin_wildcard(a:args[0], 1)
 endfunction
 
 function! s:purge(args) abort
@@ -173,10 +166,37 @@ function! s:purge(args) abort
     if len(a:args) !=# 1 || a:args[0] !~# '^[^/\\]\+$'
         throw 'vivacious: VivaPurge: invalid argument.'
     endif
-    call s:uninstall_plugin(a:args[0], 0)
+    call s:uninstall_plugin_wildcard(a:args[0], 0)
 endfunction
 
-function! s:uninstall_plugin(plug_name, keep_record) abort
+function! s:uninstall_plugin_wildcard(wildcard, keep_record) abort
+    let plug_name_list = s:expand_plug_name(a:wildcard)
+    let redraw = (len(plug_name_list) >=# 2 ? 0 : 1)
+    if len(plug_name_list) >=# 2
+        echo join(map(copy(plug_name_list), '"* " . v:val'), "\n")
+        if input('Do you want to install them?[y/N]: ') !~# '^[yY]'
+            return
+        endif
+        echon "\n"
+    endif
+    for plug_name in plug_name_list
+        call s:uninstall_plugin(plug_name, a:keep_record, redraw)
+    endfor
+endfunction
+
+function! s:expand_plug_name(wildcard) abort
+    if a:wildcard !~# '[*?]'
+        return [a:wildcard]
+    endif
+    let lockfile = s:get_lockfile()
+    let candidates = map(s:get_records_from_file(lockfile), 'v:val.name')
+    " wildcard -> regexp
+    let re = substitute(a:wildcard, '\*', '.*', 'g')
+    let re = substitute(re, '?', '.', 'g')
+    return filter(candidates, 'v:val =~# re')
+endfunction
+
+function! s:uninstall_plugin(plug_name, keep_record, redraw) abort
     let vimbundle_dir = s:vimbundle_dir()
     let plug_dir = s:path_join(vimbundle_dir, a:plug_name)
     let exists_dir = isdirectory(plug_dir)
@@ -190,7 +210,7 @@ function! s:uninstall_plugin(plug_name, keep_record) abort
         let git_dir = s:path_join(plug_dir, '.git')
         let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
         call s:unrecord_version_by_name(a:plug_name)
-        if !exists_dir
+        if !exists_dir && a:redraw
             redraw    " before the last message
         endif
         call s:info_msg(printf("Unrecording the plugin info of '%s'... Done.", a:plug_name))
@@ -199,7 +219,9 @@ function! s:uninstall_plugin(plug_name, keep_record) abort
     if exists_dir
         call s:info(printf("Uninstalling the plugin '%s'...", a:plug_name))
         call s:delete_dir(plug_dir)
-        redraw    " before the last message
+        if a:redraw
+            redraw    " before the last message
+        endif
         call s:info_msg(printf("Uninstalling the plugin '%s'... Done.", a:plug_name))
     endif
 endfunction
