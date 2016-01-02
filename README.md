@@ -74,7 +74,7 @@ open-browser.vim (not fetched)
 
 Listed managed plugins.
 
-:VivaPurge
+:VivaPurge caw.vim
 vivacious: Unrecording the plugin info of 'caw.vim'... Done.
 vivacious: Uninstalling the plugin 'caw.vim'... Done.
 
