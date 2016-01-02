@@ -17,8 +17,22 @@ function! vivacious#bundle(...)
 endfunction
 
 function! vivacious#install(args)
+    call s:call_with_error_handlers('s:install', a:args)
+endfunction
+
+function! vivacious#uninstall(args) abort
+    call s:call_with_error_handlers('s:uninstall', a:args)
+endfunction
+
+
+
+let s:is_windows = has('win16') || has('win32') || has('win64') || has('win95')
+let s:is_unix = has('unix')
+let s:NONE = []
+
+function! s:call_with_error_handlers(funcname, args) abort
     try
-        call s:install(a:args)
+        call {a:funcname}(a:args)
     catch /^vivacious:\s*fatal:/
         let e = substitute(v:exception, '^vivacious:\s*fatal:\s*', '', '')
         call s:error('Fatal error. '
@@ -57,59 +71,6 @@ function! s:install(args) abort
     endif
 endfunction
 
-function! s:cmd_install_help() abort
-    echo ''
-    echo 'Usage: VivaInstall <source>'
-    echo '       VivaInstall tyru/vivacious.vim'
-    echo '       VivaInstall https://github.com/tyru/vivacious.vim'
-endfunction
-
-
-function! vivacious#uninstall(args) abort
-    try
-        call s:uninstall(a:args)
-    catch /^vivacious:\s*fatal:/
-        let e = substitute(v:exception, '^vivacious:\s*fatal:\s*', '', '')
-        call s:error('Fatal error. '
-        \          . 'Please report this to '
-        \          . 'https://github.com/tyru/vivacious.vim/issues/new !')
-        call s:error('Error: ' . e . ' at ' . v:throwpoint)
-        call s:cmd_install_help()
-    catch /^vivacious:/
-        let e = substitute(v:exception, '^vivacious:\s*', '', '')
-        call s:error(e)
-        call s:cmd_install_help()
-    catch
-        call s:error('Internal error. '
-        \          . 'Please report this to '
-        \          . 'https://github.com/tyru/vivacious.vim/issues/new !')
-        call s:error('Error: ' . v:exception . ' at ' . v:throwpoint)
-        call s:cmd_install_help()
-    endtry
-endfunction
-
-function! s:uninstall(args) abort
-    if len(a:args) ==# 0 || a:args[0] =~# '^\%(-h\|--help\)$'
-        return s:cmd_uninstall_help()
-    endif
-    if len(a:args) !=# 1 || a:args[0] !~# '^[^/\\]\+$'
-        throw 'vivacious: VivaUninstall: invalid argument.'
-    endif
-    call s:uninstall_plugin(a:args[0])
-endfunction
-
-function! s:cmd_uninstall_help() abort
-    echo ''
-    echo 'Usage: VivaUninstall <plugin name in bundle dir>'
-    echo '       VivaUninstall vivacious.vim'
-endfunction
-
-
-
-let s:is_windows = has('win16') || has('win32') || has('win64') || has('win95')
-let s:is_unix = has('unix')
-let s:NONE = []
-
 " @param arg 'tyru/vivacious.vim'
 function! s:install_github_plugin(arg) abort
     return s:install_git_plugin('https://github.com/' . a:arg)
@@ -143,6 +104,23 @@ function! s:install_git_plugin(url) abort
     call s:record_version(plug_name, plug_dir, a:url, 'git', ver)
 endfunction
 
+function! s:cmd_install_help() abort
+    echo ''
+    echo 'Usage: VivaInstall <source>'
+    echo '       VivaInstall tyru/vivacious.vim'
+    echo '       VivaInstall https://github.com/tyru/vivacious.vim'
+endfunction
+
+function! s:uninstall(args) abort
+    if len(a:args) ==# 0 || a:args[0] =~# '^\%(-h\|--help\)$'
+        return s:cmd_uninstall_help()
+    endif
+    if len(a:args) !=# 1 || a:args[0] !~# '^[^/\\]\+$'
+        throw 'vivacious: VivaUninstall: invalid argument.'
+    endif
+    call s:uninstall_plugin(a:args[0])
+endfunction
+
 function! s:uninstall_plugin(plug_name) abort
     let vimbundle_dir = s:vimbundle_dir()
     let plug_dir = s:path_join(vimbundle_dir, a:plug_name)
@@ -160,6 +138,12 @@ function! s:uninstall_plugin(plug_name) abort
     call s:delete_dir(plug_dir)
     redraw
     call s:info_msg(printf("Uninstalling the plugin '%s'... Done.", a:plug_name))
+endfunction
+
+function! s:cmd_uninstall_help() abort
+    echo ''
+    echo 'Usage: VivaUninstall <plugin name in bundle dir>'
+    echo '       VivaUninstall vivacious.vim'
 endfunction
 
 function! s:record_version(plug_name, plug_dir, url, type, version) abort
