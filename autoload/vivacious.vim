@@ -204,7 +204,8 @@ endfunction
 function! s:unrecord_version_by_name(plug_name) abort
     let lockfile = s:get_lockfile()
     if !filereadable(lockfile)
-        throw 'vivacious: '
+        throw "vivacious: Specified lockfile doesn't exist. "
+        \   . '(' . lockfile . ')'
     endif
     " Get rid of the plugin info record which has a name of a:plug_name.
     let re = '\<name:' . a:plug_name . '\>'
