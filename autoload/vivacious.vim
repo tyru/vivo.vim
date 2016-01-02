@@ -3,6 +3,8 @@ scriptencoding utf-8
 let s:save_cpo = &cpo
 set cpo&vim
 
+let s:LOCKFILE_VERSION = 1
+
 function! vivacious#bundle(...)
     let vimbundle_dir = (a:0 ? a:1 : s:vimbundle_dir())
     if !isdirectory(vimbundle_dir)
@@ -114,6 +116,7 @@ function! s:install_git_plugin(url, redraw) abort
     endif
     call s:info_msg(printf("Installed a plugin '%s'.", plug_name))
     " Record or Lock
+    let lockfile = s:get_lockfile()
     let old_record = s:get_record_by_name(plug_name)
     let git_dir = s:path_join(plug_dir, '.git')
     if empty(old_record)
@@ -204,8 +207,7 @@ endfunction
 function! s:list(args) abort
     let lockfile = s:get_lockfile()
     let vimbundle_dir = s:vimbundle_dir()
-    let records = filereadable(lockfile) ?
-    \               s:get_records_from_file(lockfile) : []
+    let records = s:get_records_from_file(lockfile)
     if empty(records)
         echomsg 'No plugins are installed.'
         return
@@ -281,20 +283,29 @@ endfunction
 
 function! s:record_version(record) abort
     let lockfile = s:get_lockfile()
-    let lines = (filereadable(lockfile) ? readfile(lockfile) : [])
-    call writefile(lines + [s:to_ltsv(a:record)], lockfile)
+    let lines = s:read_lockfile(lockfile)
+    call s:write_lockfile(lines + [s:to_ltsv(a:record)], lockfile)
 endfunction
 
+" If lockfile doesn't exist, treat it as empty file.
 function! s:unrecord_version_by_name(plug_name) abort
     let lockfile = s:get_lockfile()
     if !filereadable(lockfile)
-        throw "vivacious: Specified lockfile doesn't exist. "
-        \   . '(' . lockfile . ')'
+        return
     endif
     " Get rid of the plugin info record which has a name of a:plug_name.
     let re = '\<name:' . a:plug_name . '\>'
-    let lines = filter(readfile(lockfile), 'v:val !~# re')
-    call writefile(lines, lockfile)
+    let lines = filter(s:read_lockfile(lockfile), 'v:val !~# re')
+    call s:write_lockfile(lines, lockfile)
+endfunction
+
+" If lockfile doesn't exist, treat it as empty file.
+function! s:read_lockfile(lockfile) abort
+    return filereadable(a:lockfile) ? readfile(a:lockfile)[1:] : []
+endfunction
+
+function! s:write_lockfile(lines, lockfile) abort
+    return writefile(["version:" + s:LOCKFILE_VERSION] + a:lines, a:lockfile)
 endfunction
 
 function! s:get_record_by_name(name) abort
@@ -307,14 +318,12 @@ function! s:has_record_name_of(name) abort
     return !empty(s:get_record_by_name(a:name))
 endfunction
 
+" If lockfile doesn't exist, treat it as empty file.
 function! s:get_records_from_file(lockfile) abort
     if !filereadable(a:lockfile)
-        " This should be checked at earlier time!
-        throw "vivacious: fatal: s:get_records_from_file(): "
-        \   . "Specified lockfile doesn't exist. "
-        \   . '(' . a:lockfile . ')'
+        return []
     endif
-    return map(readfile(a:lockfile), 's:parse_ltsv(v:val)')
+    return map(s:read_lockfile(a:lockfile), 's:parse_ltsv(v:val)')
 endfunction
 
 " http://ltsv.org/
