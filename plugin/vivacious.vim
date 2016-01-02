@@ -17,12 +17,15 @@ endif
 command! -bar -nargs=*
 \   VivaInstall call vivacious#install(<f-args>)
 command! -bar -nargs=*
+\   -complete=customlist,vivacious#__complete_remove__
 \   VivaRemove call vivacious#remove(<f-args>)
 command! -bar -nargs=*
+\   -complete=customlist,vivacious#__complete_remove__
 \   VivaPurge call vivacious#purge(<f-args>)
 command! -bar -nargs=*
 \   VivaList call vivacious#list(<f-args>)
 command! -bar -nargs=*
+\   -complete=file
 \   VivaFetchAll call vivacious#fetch_all(<f-args>)
 
 let &cpo = s:save_cpo

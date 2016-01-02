@@ -26,6 +26,21 @@ function! vivacious#remove(...) abort
     call s:call_with_error_handlers('s:remove', a:000, 's:cmd_remove_help')
 endfunction
 
+function! vivacious#__complete_remove__(arglead, cmdline, cursorpos) abort
+    let lockfile = s:get_lockfile()
+    let candidates = map(s:get_records_from_file(lockfile), 'v:val.name')
+    if a:cmdline !~# '^[A-Z]\w*\s\+.\+$'    " no args
+        return candidates
+    endif
+    if a:arglead ==# ''    " ?
+        return candidates
+    endif
+    " wildcard -> regexp
+    let arglead = substitute(a:arglead, '\*', '.*', 'g')
+    let arglead = substitute(arglead, '?', '.', 'g')
+    return filter(candidates, 'v:val =~# arglead')
+endfunction
+
 function! vivacious#purge(...) abort
     call s:call_with_error_handlers('s:purge', a:000, 's:cmd_purge_help')
 endfunction
