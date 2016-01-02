@@ -367,11 +367,11 @@ endfunction
 function! s:parse_ltsv(line) abort
     let dict = {}
     let re = '^\([^:]\+\):\(.*\)'
-    for line in split(a:line, '\t')
-        if line ==# ''
+    for keyval in split(a:line, '\t')
+        if keyval ==# ''
             continue
         endif
-        let m = matchlist(line, re)
+        let m = matchlist(keyval, re)
         if empty(m)
             throw "vivacious: fatal: s:parse_ltsv(): Vivacious.lock file is corrupted."
         endif
