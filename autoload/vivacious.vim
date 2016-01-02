@@ -231,23 +231,22 @@ function! s:uninstall_plugin(plug_name, keep_record, redraw, lockfile) abort
     endif
     " Remove the plugin info.
     if has_record && !a:keep_record
-        call s:info(printf("Unrecording the plugin info of '%s'...", a:plug_name))
         let git_dir = s:path_join(plug_dir, '.git')
         let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
         call s:do_unrecord_by_name(a:plug_name, a:lockfile)
         if !exists_dir && a:redraw
             redraw    " before the last message
         endif
-        call s:info_msg(printf("Unrecording the plugin info of '%s'... Done.", a:plug_name))
+        call s:info_msg(printf("Unrecorded the plugin info of '%s'.", a:plug_name))
     endif
     " Remove the plugin directory.
     if exists_dir
-        call s:info(printf("Uninstalling the plugin '%s'...", a:plug_name))
+        call s:info(printf("Deleting the plugin directory '%s'...", a:plug_name))
         call s:delete_dir(plug_dir)
         if a:redraw
             redraw    " before the last message
         endif
-        call s:info_msg(printf("Uninstalling the plugin '%s'... Done.", a:plug_name))
+        call s:info_msg(printf("Deleting the plugin directory '%s'... Done.", a:plug_name))
     endif
 endfunction
 
