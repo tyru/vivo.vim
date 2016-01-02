@@ -99,9 +99,9 @@ function! s:install_git_plugin(url, redraw) abort
     endif
     let plug_dir = s:path_join(vimbundle_dir, plug_name)
     if isdirectory(plug_dir)
-        call s:error(printf("You already installed '%s'. "
-        \                 . "Please uninstall it.", plug_name))
-        return
+        throw "vivacious: You already installed '" . plug_name . "'. "
+        \   . "Please uninstall it by "
+        \   . ":VivaRemove or :VivaPurge."
     endif
     " Fetch & Install
     call s:info(printf("Fetching a plugin from '%s'...", a:url))
@@ -231,9 +231,13 @@ function! s:fetch_all_from_lockfile(lockfile) abort
     endif
     let vimbundle_dir = s:vimbundle_dir()
     for record in s:get_records_from_file(a:lockfile)
-        " XXX: Need to clone into record.plug_dir
-        " if bundle dir was changed?
-        call s:install_git_plugin(record.url, 0)
+        try
+            " XXX: Need to clone into record.plug_dir
+            " if bundle dir was changed?
+            call s:install_git_plugin(record.url, 0)
+        catch /vivacious: You already installed/
+            " silently skip
+        endtry
     endfor
     call s:info_msg('VivaFetchAll: All plugins are installed!')
 endfunction
