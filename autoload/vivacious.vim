@@ -84,23 +84,22 @@ function! s:install(args) abort
     endif
     if a:args[0] =~# '^[^/]\+/[^/]\+$'
         " 'tyru/vivacious.vim'
-        call s:install_github_plugin(a:args[0], s:get_lockfile())
+        call s:install_github_plugin(a:args[0])
     elseif a:args[0] =~# '^\%(http\s\?\|git\)://'
         " 'https://github.com/tyru/vivacious.vim'
-        call s:install_git_plugin(a:args[0], 1,
-        \                         s:vimbundle_dir(), s:get_lockfile())
+        call s:install_git_plugin(a:args[0], 1, s:vimbundle_dir())
     else
         throw 'vivacious: VivaInstall: invalid arguments.'
     endif
 endfunction
 
 " @param arg 'tyru/vivacious.vim'
-function! s:install_github_plugin(arg, lockfile) abort
-    return s:install_git_plugin('https://github.com/' . a:arg, 1,
-    \                           s:vimbundle_dir(), a:lockfile)
+function! s:install_github_plugin(arg) abort
+    return s:install_git_plugin(
+    \           'https://github.com/' . a:arg, 1, s:vimbundle_dir())
 endfunction
 
-function! s:install_git_plugin(url, redraw, vimbundle_dir, lockfile) abort
+function! s:install_git_plugin(url, redraw, vimbundle_dir) abort
     let plug_name = matchstr(a:url, '[^/]\+\%(\.git\)\?$')
     if plug_name ==# ''
         throw 'vivacious: Invalid URL(' . a:url . ')'
@@ -124,14 +123,15 @@ function! s:install_git_plugin(url, redraw, vimbundle_dir, lockfile) abort
     endif
     call s:info_msg(printf("Installed a plugin '%s'.", plug_name))
     " Record or Lock
-    let old_record = s:get_record_by_name(plug_name, a:lockfile)
+    let vim_lockfile = s:get_lockfile()
+    let old_record = s:get_record_by_name(plug_name, vim_lockfile)
     let git_dir = s:path_join(plug_dir, '.git')
     if empty(old_record)
         " If the record is not found, record the plugin info.
         let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
         let dir = s:path_join(s:path_basename(a:vimbundle_dir), plug_name)
         let record = s:make_record(plug_name, dir, a:url, 'git', ver)
-        call s:do_record(record, a:lockfile)
+        call s:do_record(record, vim_lockfile)
     else
         " If the record is found, lock the version.
         call s:git('--git-dir', git_dir, 'checkout', old_record.version)
@@ -139,7 +139,7 @@ function! s:install_git_plugin(url, redraw, vimbundle_dir, lockfile) abort
 endfunction
 
 function! s:cmd_install_help() abort
-    echo ''
+    echo ' '
     echo 'Usage: VivaInstall <source>'
     echo '       VivaInstall tyru/vivacious.vim'
     echo '       VivaInstall https://github.com/tyru/vivacious.vim'
@@ -223,20 +223,20 @@ function! s:uninstall_plugin(plug_name, keep_record, redraw, lockfile) abort
 endfunction
 
 function! s:cmd_remove_help() abort
-    echo ''
+    echo ' '
     echo 'Usage: VivaRemove <plugin name in bundle dir>'
     echo '       VivaRemove vivacious.vim'
-    echo ''
+    echo ' '
     echo ':VivaRemove removes only a plugin directory.'
     echo 'It keeps a plugin info.'
     echo 'After this command is executed, :VivaFetchAll can fetch a plugin directory again.'
 endfunction
 
 function! s:cmd_purge_help() abort
-    echo ''
+    echo ' '
     echo 'Usage: VivaPurge <plugin name in bundle dir>'
     echo '       VivaPurge vivacious.vim'
-    echo ''
+    echo ' '
     echo ':VivaPurge removes both a plugin directory and a plugin info.'
     echo ':VivaFetchAll doesn''t help, all data about specified plugin are gone.'
 endfunction
@@ -269,9 +269,9 @@ function! s:list(args) abort
 endfunction
 
 function! s:cmd_list_help() abort
-    echo ''
+    echo ' '
     echo 'Usage: VivaList'
-    echo ''
+    echo ' '
     echo 'Lists managed plugins including plugins which have been not fetched.'
 endfunction
 
@@ -296,7 +296,7 @@ function! s:fetch_all_from_lockfile(lockfile) abort
             \                            record.dir :
             \       s:path_join(s:vim_dir(), record.dir))
             let vimbundle_dir = s:path_dirname(plug_dir)
-            call s:install_git_plugin(record.url, 0, vimbundle_dir, a:lockfile)
+            call s:install_git_plugin(record.url, 0, vimbundle_dir)
         catch /vivacious: You already installed/
             " silently skip
         endtry
@@ -305,10 +305,10 @@ function! s:fetch_all_from_lockfile(lockfile) abort
 endfunction
 
 function! s:cmd_fetch_all_help() abort
-    echo ''
+    echo ' '
     echo 'Usage: VivaFetchAll [<Vivacious.lock>]'
     echo '       VivaFetchAll /path/to/Vivacious.lock'
-    echo ''
+    echo ' '
     echo 'If no arguments are given, ~/.vim/Vivacious.lock is used.'
 endfunction
 
