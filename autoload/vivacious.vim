@@ -124,6 +124,9 @@ function! s:install_git_plugin(url, redraw, vimbundle_dir) abort
     " Fetch & Install
     call s:info(printf("Fetching a plugin from '%s'...", a:url))
     call s:git('clone', a:url, plug_dir)
+    if v:shell_error
+        throw printf("vivacious: 'git clone %s %s' failed.", a:url, plug_dir)
+    endif
     call s:info_msg(printf("Fetching a plugin from '%s'... Done.", a:url))
     call s:source_plugin(plug_dir)
     if a:redraw
