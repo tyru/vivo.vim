@@ -90,6 +90,9 @@ function! s:install(args) abort
     elseif a:args[0] =~# s:GIT_URL_RE
         " 'https://github.com/tyru/vivacious.vim'
         call s:install_git_plugin(a:args[0], 1, s:vimbundle_dir())
+        let plug_dir = s:path_join(s:vimbundle_dir(),
+        \                          s:path_basename(a:args[0]))
+        call s:update_record(plug_dir)
     else
         throw 'vivacious: VivaInstall: invalid arguments.'
     endif
@@ -97,8 +100,11 @@ endfunction
 
 " @param arg 'tyru/vivacious.vim'
 function! s:install_github_plugin(arg) abort
-    return s:install_git_plugin(
+    call s:install_git_plugin(
     \           'https://github.com/' . a:arg, 1, s:vimbundle_dir())
+    let plug_dir = s:path_join(s:vimbundle_dir(),
+    \                          s:path_basename(a:arg))
+    call s:update_record(plug_dir)
 endfunction
 
 function! s:install_git_plugin(url, redraw, vimbundle_dir) abort
@@ -124,14 +130,18 @@ function! s:install_git_plugin(url, redraw, vimbundle_dir) abort
         redraw    " before the last message
     endif
     call s:info_msg(printf("Installed a plugin '%s'.", plug_name))
+endfunction
+
+function! s:update_record(plug_dir) abort
     " Record or Lock
+    let plug_name = s:path_basename(a:plug_dir)
     let vim_lockfile = s:get_lockfile()
     let old_record = s:get_record_by_name(plug_name, vim_lockfile)
-    let git_dir = s:path_join(plug_dir, '.git')
+    let git_dir = s:path_join(a:plug_dir, '.git')
     if empty(old_record)
         " If the record is not found, record the plugin info.
-        let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
         let dir = s:path_join(s:path_basename(a:vimbundle_dir), plug_name)
+        let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
         let record = s:make_record(plug_name, dir, a:url, 'git', ver)
         call s:do_record(record, vim_lockfile)
     else
@@ -304,6 +314,7 @@ function! s:fetch_all_from_lockfile(lockfile) abort
             \       s:path_join(s:vim_dir(), record.dir))
             let vimbundle_dir = s:path_dirname(plug_dir)
             call s:install_git_plugin(record.url, 0, vimbundle_dir)
+            call s:update_record(plug_dir)
         catch /vivacious: You already installed/
             " silently skip
         endtry
