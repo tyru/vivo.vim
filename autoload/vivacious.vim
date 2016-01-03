@@ -299,7 +299,7 @@ function! s:list(args) abort
             echomsg record.name . " (not fetched)"
             echohl None
         endif
-        echomsg "  Directory: " . record.dir
+        echomsg "  Directory: " . s:abspath_record_dir(record.dir)
         echomsg "  Type: " . record.type
         echomsg "  URL: " . record.url
         echomsg "  Version: " . record.version
@@ -336,10 +336,7 @@ function! s:fetch_all_from_lockfile(lockfile) abort
     let vimbundle_dir = s:vimbundle_dir()
     for record in s:get_records_from_file(a:lockfile)
         try
-            " If plug_dir is relative path, concat to vimbundle_dir.
-            let plug_dir = (record.dir =~# '^[/\\]' ?
-            \                            record.dir :
-            \       s:path_join(s:vim_dir(), record.dir))
+            let plug_dir = s:abspath_record_dir(record.dir)
             let vimbundle_dir = s:path_dirname(plug_dir)
             call s:install_git_plugin(record.url, 0, vimbundle_dir)
             call s:update_record(record.url, vimbundle_dir,
@@ -551,6 +548,12 @@ endfunction
 function! s:path_dirname(path) abort
     let path = substitute(a:path, '[/\\]\+$', '', '')
     return fnamemodify(path, ':h')
+endfunction
+
+" If dir is relative path, concat to s:vim_dir().
+function! s:abspath_record_dir(dir) abort
+    return (a:dir =~# '^[/\\]' ? a:dir :
+    \           s:path_join(s:vim_dir(), a:dir))
 endfunction
 
 " TODO: Support older vim
