@@ -216,14 +216,18 @@ endfunction
 
 function! s:uninstall_plugin_wildcard(wildcard, keep_record, lockfile) abort
     let plug_name_list = s:expand_plug_name(a:wildcard, a:lockfile)
-    let redraw = (len(plug_name_list) >=# 2 ? 0 : 1)
-    if len(plug_name_list) >=# 2
-        echo join(map(copy(plug_name_list), '"* " . v:val'), "\n")
-        if input('Do you want to install them?[y/N]: ') !~# '^[yY]'
-            return
-        endif
-        echon "\n"
+    if empty(plug_name_list)
+        echo 'No matching plugins.'
+        return
     endif
+    let redraw = (len(plug_name_list) >=# 2 ? 0 : 1)
+    " Ask if a user really uninstalls them.
+    echo join(map(copy(plug_name_list), '"* " . v:val'), "\n")
+    if input('Do you want to uninstall them?[y/N]: ') !~# '^[yY]'
+        return
+    endif
+    echon "\n"
+    " Uninstall all.
     for plug_name in plug_name_list
         call s:uninstall_plugin(plug_name, a:keep_record, redraw, a:lockfile)
     endfor
