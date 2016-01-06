@@ -345,7 +345,13 @@ function! s:fetch_all(args) abort
         let lockfile = tempname()
         call writefile(split(content, '\r\?\n', 1), lockfile)
     endif
-    call s:fetch_all_from_lockfile(lockfile)
+    try
+        call s:fetch_all_from_lockfile(lockfile)
+    finally
+        if lockfile =~# s:HTTP_URL_RE
+            call delete(lockfile)
+        endif
+    endtry
 endfunction
 
 function! s:fetch_all_from_lockfile(lockfile) abort
