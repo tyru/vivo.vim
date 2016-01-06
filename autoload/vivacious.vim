@@ -3,6 +3,10 @@ scriptencoding utf-8
 let s:save_cpo = &cpo
 set cpo&vim
 
+
+let g:vivacious#debug = get(g:, 'vivacious#debug', 0)
+
+
 let s:LOCKFILE_VERSION = 1
 
 function! vivacious#bundle(...)
@@ -616,28 +620,29 @@ function! s:mkdir_p(path) abort
 endfunction
 
 " TODO: More better highlight.
-function! s:info(msg) abort
-    echohl MoreMsg
+function! s:info(msg, ...) abort
+    execute 'echohl' (a:0 ? a:1 : 'MoreMsg')
     echo 'vivacious:' a:msg
     echohl None
 endfunction
 
 " TODO: More better highlight.
-function! s:info_msg(msg) abort
-    echohl MoreMsg
+function! s:info_msg(msg, ...) abort
+    execute 'echohl' (a:0 ? a:1 : 'MoreMsg')
     echomsg 'vivacious:' a:msg
     echohl None
 endfunction
 
-function! s:echomsg(msg) abort
-    echohl ErrorMsg
+function! s:error(msg, ...) abort
+    execute 'echohl' (a:0 ? a:1 : 'ErrorMsg')
     echomsg 'vivacious:' a:msg
     echohl None
 endfunction
 
-function! s:error(msg) abort
-    echohl ErrorMsg
-    echomsg 'vivacious:' a:msg
+function! s:debug_msg(msg, ...) abort
+    if !g:vivacious#debug | return | endif
+    execute 'echohl' (a:0 ? a:1 : 'Underlined')
+    echomsg 'vivacious(DEBUG):' a:msg
     echohl None
 endfunction
 
