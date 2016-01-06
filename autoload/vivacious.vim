@@ -381,16 +381,16 @@ function! s:fetch_all_from_lockfile(lockfile) abort
     endif
     let vimbundle_dir = s:vimbundle_dir()
     for record in s:get_records_from_file(a:lockfile)
+        let plug_dir = s:abspath_record_dir(record.dir)
+        let vimbundle_dir = s:path_dirname(plug_dir)
+        let plug_name = s:path_basename(plug_dir)
         try
-            let plug_dir = s:abspath_record_dir(record.dir)
-            let vimbundle_dir = s:path_dirname(plug_dir)
             call s:install_git_plugin(record.url, 0, vimbundle_dir)
-            let plug_name = s:path_basename(plug_dir)
             call s:update_record(record.url, vimbundle_dir,
             \                    plug_dir, 0, record.version)
             call s:lock_version(record, plug_name, plug_dir)
         catch /vivacious: You already installed/
-            " silently skip
+            call s:info_msg("You already installed '" . plug_name . "'.")
         endtry
     endfor
     call s:info_msg('VivaFetchAll: All plugins are installed!')
