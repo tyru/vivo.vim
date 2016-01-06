@@ -358,9 +358,9 @@ endfunction
 
 function! s:http_get(url) abort
     if executable('curl')
-        return system('curl -L -s -k ' . shellescape(a:url))
+        return system('curl -L -s -k ' . s:shellescape(a:url))
     elseif executable('wget')
-        return system('wget -q -L -O - ' . shellescape(a:url))
+        return system('wget -q -L -O - ' . s:shellescape(a:url))
     else
         throw 'vivacious: s:http_get(): '
         \   . 'you doesn''t have curl nor wget.'
@@ -455,7 +455,7 @@ if s:is_unix
     let flags = a:0 ? a:1 : ''
     let cmd = flags =~# 'r' ? 'rm -r' : 'rmdir'
     let cmd .= flags =~# 'f' && cmd ==# 'rm -r' ? ' -f' : ''
-    let ret = system(cmd . ' ' . shellescape(a:path))
+    let ret = system(cmd . ' ' . s:shellescape(a:path))
     if v:shell_error
       let ret = iconv(ret, 'char', &encoding)
       throw substitute(ret, '\n', '', 'g')
@@ -467,7 +467,7 @@ elseif s:is_windows
     if &shell =~? "sh$"
       let cmd = flags =~# 'r' ? 'rm -r' : 'rmdir'
       let cmd .= flags =~# 'f' && cmd ==# 'rm -r' ? ' -f' : ''
-      let ret = system(cmd . ' ' . shellescape(a:path))
+      let ret = system(cmd . ' ' . s:shellescape(a:path))
     else
       " 'f' flag does not make sense.
       let cmd = 'rmdir /Q'
@@ -498,6 +498,11 @@ endfunction
 
 function! s:glob(expr) abort
     return glob(a:expr, 1, 1)
+endfunction
+
+function! s:shellescape(str) abort
+    let quote = (&shellxquote ==# '"' ? "'" : '"')
+    return quote . a:str . quote
 endfunction
 
 function! s:git(...) abort
