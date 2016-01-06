@@ -401,7 +401,17 @@ function! s:read_lockfile(lockfile) abort
     if !filereadable(a:lockfile)
         return []
     endif
-    return filter(readfile(a:lockfile)[1:], '!empty(v:val)')
+    let [ver; lines] = readfile(a:lockfile)
+    let result = s:parse_ltsv(ver)
+    if !has_key(result, 'version')
+        throw 'vivacious: fatal: s:read_lockfile(): '
+        \   . 'Vivacious.lock file is corrupted.'
+    endif
+    if result.version > s:LOCKFILE_VERSION
+        throw 'vivacious: Too old vivacious.vim for parsing lockfile. '
+        \   . 'Please update the plugin.'
+    endif
+    return filter(lines, '!empty(v:val)')
 endfunction
 
 function! s:write_lockfile(lines, lockfile) abort
