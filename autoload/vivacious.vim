@@ -140,12 +140,12 @@ function! s:update_record(url, vimbundle_dir, plug_dir, update, ...) abort
     let plug_name = s:path_basename(a:plug_dir)
     let vim_lockfile = s:get_lockfile()
     let old_record = s:get_record_by_name(plug_name, vim_lockfile)
-    let git_dir = s:path_join(a:plug_dir, '.git')
     if empty(old_record)
         " If the record is not found, record the plugin info.
         let dir = s:path_join(s:path_basename(a:vimbundle_dir), plug_name)
         let ver = (a:0 ? a:1 :
-        \           s:git('--git-dir', git_dir, 'rev-parse', 'HEAD'))
+        \           s:git({'work_tree': a:plug_dir,
+        \                  'args': ['rev-parse', 'HEAD']}))
         let record = s:make_record(plug_name, dir, a:url, 'git', ver)
         call s:do_record(record, vim_lockfile)
         call s:info_msg(printf("Recorded the plugin info of '%s'.", plug_name))
@@ -153,7 +153,8 @@ function! s:update_record(url, vimbundle_dir, plug_dir, update, ...) abort
         " Update version.
         call s:do_unrecord_by_name(plug_name, vim_lockfile)
         let dir = s:path_join(s:path_basename(a:vimbundle_dir), plug_name)
-        let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
+        let ver = s:git({'work_tree': a:plug_dir,
+        \                'args': ['rev-parse', 'HEAD']})
         let record = s:make_record(plug_name, dir, a:url, 'git', ver)
         call s:do_record(record, vim_lockfile)
         call s:info_msg(printf("Updated the version of '%s' (%s -> %s).",
@@ -168,9 +169,8 @@ function! s:update_record(url, vimbundle_dir, plug_dir, update, ...) abort
 endfunction
 
 function! s:lock_version(plug_dir, record, plug_name) abort
-    let git_dir = s:path_join(a:plug_dir, '.git')
-    call s:git('--git-dir', git_dir, '--work-tree', a:plug_dir,
-    \               'checkout', a:record.version)
+    call s:git({'work_tree': a:plug_dir,
+    \           'args': ['checkout', a:record.version]})
     if v:shell_error
         throw printf("vivacious: 'git checkout %s' failed.",
         \                               a:record.version)
@@ -243,8 +243,8 @@ function! s:uninstall_plugin(plug_name, keep_record, redraw, lockfile) abort
     endif
     " Remove the plugin info.
     if has_record && !a:keep_record
-        let git_dir = s:path_join(plug_dir, '.git')
-        let ver = s:git('--git-dir', git_dir, 'rev-parse', 'HEAD')
+        let ver = s:git({'work_tree': plug_dir,
+        \                'args': ['rev-parse', 'HEAD']})
         call s:do_unrecord_by_name(a:plug_name, a:lockfile)
         if !exists_dir && a:redraw
             redraw    " before the last message
@@ -501,11 +501,21 @@ function! s:glob(expr) abort
 endfunction
 
 function! s:git(...) abort
+    if type(a:1) ==# type({})
+        let args = copy(a:1.args)
+        if has_key(a:1, 'work_tree')
+            let git_dir = s:path_join(a:1.work_tree, '.git')
+            let args = ['--git-dir', git_dir,
+            \           '--work-tree', a:1.work_tree] + args
+        endif
+    else
+        let args = copy(a:000)
+    endif
     if !executable('git')
         " This should be checked at earlier time!
         throw "vivacious: fatal: 'git' is not installed in your PATH."
     endif
-    let args = map(copy(a:000), 'shellescape(v:val)')
+    let args = map(args, 's:shellescape(v:val)')
     let out  = system(join(['git'] + args, ' '))
     return substitute(out, '\n\+$', '', '')
 endfunction
