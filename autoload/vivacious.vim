@@ -27,10 +27,18 @@ function! vivacious#remove(...) abort
 endfunction
 
 function! vivacious#__complete_remove__(arglead, cmdline, cursorpos) abort
-    if a:cmdline !~# '^[A-Z]\w*\s\+.\+$' || a:arglead ==# ''
+    if a:cmdline !~# '^[A-Z]\w*\s\+.\+$'    " no args
         return map(s:get_records_from_file(s:get_lockfile()), 'v:val.name')
+    elseif a:arglead !=# ''    " has arguments
+        if a:arglead =~# '[*?]'    " it has wildcard characters
+            return s:expand_plug_name(a:arglead, s:get_lockfile())
+        endif
+        " match by prefix
+        let candidates = map(s:get_records_from_file(s:get_lockfile()),
+        \                    'v:val.name')
+        call filter(candidates, 'v:val =~# "^" . a:arglead')
+        return candidates
     endif
-    return s:expand_plug_name(a:arglead, s:get_lockfile())
 endfunction
 
 function! vivacious#purge(...) abort
