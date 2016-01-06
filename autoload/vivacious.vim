@@ -230,6 +230,7 @@ function! s:uninstall_plugin_wildcard(wildcard, keep_record, lockfile) abort
     endif
     let redraw = (len(plug_name_list) >=# 2 ? 0 : 1)
     " Ask if a user really uninstalls them.
+    " TODO: highlight
     echo join(map(copy(plug_name_list), '"* " . v:val'), "\n")
     if input('Do you want to uninstall them?[y/N]: ') !~# '^[yY]'
         return
@@ -614,14 +615,14 @@ function! s:mkdir_p(path) abort
     return mkdir(a:path, 'p')
 endfunction
 
-" TODO: More appropriate highlight.
+" TODO: More better highlight.
 function! s:info(msg) abort
     echohl MoreMsg
     echo 'vivacious:' a:msg
     echohl None
 endfunction
 
-" TODO: More appropriate highlight.
+" TODO: More better highlight.
 function! s:info_msg(msg) abort
     echohl MoreMsg
     echomsg 'vivacious:' a:msg
