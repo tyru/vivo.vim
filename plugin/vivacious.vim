@@ -27,6 +27,8 @@ command! -bar -nargs=*
 command! -bar -nargs=*
 \   -complete=file
 \   VivaFetchAll call vivacious#fetch_all(<f-args>)
+command! -bar -nargs=*
+\   VivaUpdate call vivacious#update(<f-args>)
 
 let &cpo = s:save_cpo
 unlet s:save_cpo

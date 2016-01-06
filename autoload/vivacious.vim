@@ -58,6 +58,11 @@ function! vivacious#fetch_all(...) abort
     \                               's:cmd_fetch_all_help')
 endfunction
 
+function! vivacious#update(...) abort
+    call s:call_with_error_handlers('s:update', a:000,
+    \                               's:cmd_update_help')
+endfunction
+
 
 
 let s:is_windows = has('win16') || has('win32') || has('win64') || has('win95')
@@ -152,7 +157,13 @@ function! s:install_git_plugin(url, redraw, vimbundle_dir) abort
 endfunction
 
 " @return updated record
-function! s:update_record(url, vimbundle_dir, plug_dir, update, ...) abort
+" @param init (Boolean)
+"   non-zero (:VivaInstall)
+"   * Bump version when the plugin is already recorded.
+"   * Save current branch before locking version.
+"   zero (:VivaFetchAll)
+"   * Do not bump version when the plugin is already recorded.
+function! s:update_record(url, vimbundle_dir, plug_dir, init, ...) abort
     " Record or Lock
     let plug_name = s:path_basename(a:plug_dir)
     let vim_lockfile = s:get_lockfile()
@@ -163,17 +174,21 @@ function! s:update_record(url, vimbundle_dir, plug_dir, update, ...) abort
         let ver = (a:0 ? a:1 :
         \           s:git({'work_tree': a:plug_dir,
         \                  'args': ['rev-parse', 'HEAD']}))
-        let record = s:make_record(plug_name, dir, a:url, 'git', ver)
+        let branch = s:git_current_branch(a:plug_dir)
+        let remote = s:git_upstream_of(branch, a:plug_dir)
+        let record = s:make_record(plug_name, dir, a:url, 'git',
+        \                          ver, branch, remote)
         call s:do_record(record, vim_lockfile)
         call s:info_msg(printf("Recorded the plugin info of '%s'.", plug_name))
         return record
-    elseif a:update
-        " Update version.
+    elseif a:init
+        " Bump version.
         call s:do_unrecord_by_name(plug_name, vim_lockfile)
         let dir = s:path_join(s:path_basename(a:vimbundle_dir), plug_name)
         let ver = s:git({'work_tree': a:plug_dir,
         \                'args': ['rev-parse', 'HEAD']})
-        let record = s:make_record(plug_name, dir, a:url, 'git', ver)
+        let record = s:make_record(plug_name, dir, a:url, 'git',
+        \               ver, old_record.branch, old_record.remote)
         call s:do_record(record, vim_lockfile)
         if old_record.version ==# record.version
             call s:info_msg(printf("The version of '%s' was unchanged (%s).",
@@ -389,6 +404,85 @@ function! s:cmd_fetch_all_help() abort
     echo 'If no arguments are given, ~/.vim/Vivacious.lock is used.'
 endfunction
 
+function! s:update(args) abort
+    " Pre-check and build git update commands.
+    let update_cmd_list = []
+    for record in s:get_records_from_file(s:get_lockfile())
+        let plug_dir = s:abspath_record_dir(record.dir)
+        if !isdirectory(plug_dir)
+            call add(update_cmd_list,
+            \   {'msg': printf("'%s' is not installed...skip.", record.name)})
+        endif
+        " If the branch is detached state,
+        " See branch when git clone and recorded in Vivacious.lock.
+        let branch = s:git_current_branch(plug_dir)
+        if branch =~# '^([^)]\+)$'
+            call s:debug_msg(printf('%s: detached state (%s)',
+            \                       record.name, branch))
+            if !has_key(record, 'branch')
+            \   || !has_key(record, 'remote')
+                throw 'vivacious: The repository is detached state '
+                \   . 'but no tracking branch and upstream in Vivacious.lock'
+            endif
+            let branch = record.branch
+            let remote = record.remote
+            call add(update_cmd_list,
+            \   {'name': record.name,
+            \    'work_tree': plug_dir, 'args': ['pull', remote, branch]})
+
+        " If the branch has a remote tracking branch, just git pull.
+        elseif s:git_upstream_of(branch, plug_dir) !~# '^\s*$'
+            if g:vivacious#debug
+                call s:debug_msg(printf('%s: upstream is set (%s)',
+                \   record.name, s:git_upstream_of(branch, plug_dir)))
+            endif
+            call add(update_cmd_list,
+            \   {'name': record.name,
+            \    'work_tree': plug_dir, 'args': ['pull']})
+
+        " If the branch does not have a remote tracking branch,
+        " Shows an error.
+        else
+            call s:debug_msg(printf(
+            \   "%s: couldn't find a way to update plugin", record.name))
+            throw printf("vivacious: couldn't find a way to "
+            \          . "update plugin '%s'.", record.name)
+        endif
+    endfor
+    " Update all plugins.
+    for cmd in update_cmd_list
+        if has_key(cmd, 'msg')
+            call s:info_msg(cmd.msg)
+        else
+            let name = remove(cmd, 'name')
+            call s:info(printf('%s: Updating...', name), 'Normal')
+            let oldver = s:git({'work_tree': cmd.work_tree,
+            \                   'args': ['rev-parse', '--short', 'HEAD']})
+            let start = reltime()
+            call s:git(cmd)
+            let time  = str2float(reltimestr(reltime(start)))
+            let ver = s:git({'work_tree': cmd.work_tree,
+            \                'args': ['rev-parse', '--short', 'HEAD']})
+            if oldver !=# ver
+                call s:info_msg(printf('%s: Updated (%.1fs, %s -> %s)',
+                \                       name, time, oldver, ver))
+            else
+                call s:info_msg(printf('%s: Unchanged (%.1fs, %s)',
+                \                       name, time, ver), 'Normal')
+            endif
+        endif
+    endfor
+    call s:info_msg(' ')
+    call s:info_msg('Updated all plugins!')
+endfunction
+
+function! s:cmd_update_help() abort
+    echo ' '
+    echo 'Usage: VivaUpdate'
+    echo ' '
+    echo 'Updates all installed plugins.'
+endfunction
+
 function! s:http_get(url) abort
     if executable('curl')
         return system('curl -L -s -k ' . s:shellescape(a:url))
@@ -400,9 +494,10 @@ function! s:http_get(url) abort
     endif
 endfunction
 
-function! s:make_record(name, dir, url, type, version) abort
+function! s:make_record(name, dir, url, type, version, branch, remote) abort
     return {'name': a:name, 'dir': a:dir, 'url': a:url,
-    \       'type': a:type, 'version': a:version}
+    \       'type': a:type, 'version': a:version, 'branch': a:branch,
+    \       'remote': a:remote}
 endfunction
 
 function! s:do_record(record, lockfile) abort
@@ -566,6 +661,25 @@ function! s:git(...) abort
     let args = map(args, 's:shellescape(v:val)')
     let out  = system(join(['git'] + args, ' '))
     return substitute(out, '\n\+$', '', '')
+endfunction
+
+function! s:git_current_branch(work_tree) abort
+    let lines = split(s:git({'args': ['branch'],
+    \                        'work_tree': a:work_tree}), '\n')
+    let re = '^\* '
+    call filter(lines, 'v:val =~# re')
+    if empty(lines)
+        throw "vivacious: fatal: Could not find current branch "
+        \   . "from 'git branch' output."
+    endif
+    return substitute(lines[0], re, '', '')
+endfunction
+
+" Get an upstream of remote tracking branch 'a:branch'.
+function! s:git_upstream_of(branch, work_tree) abort
+    let config = 'branch.' . a:branch . '.remote'
+    return s:git({'args': ['config', '--get', config],
+    \                   'work_tree': a:work_tree})
 endfunction
 
 function! s:get_lockfile() abort
