@@ -755,7 +755,7 @@ endfunction
 
 function! s:debug_msg(msg, ...) abort
     if !g:vivacious#debug | return | endif
-    execute 'echohl' (a:0 ? a:1 : 'Underlined')
+    execute 'echohl' (a:0 ? a:1 : 'WarningMsg')
     echomsg 'vivacious(DEBUG):' a:msg
     echohl None
 endfunction
