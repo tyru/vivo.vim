@@ -97,10 +97,13 @@ function! s:install(args) abort
         call s:install_github_plugin(a:args[0])
     elseif a:args[0] =~# s:GIT_URL_RE
         " 'https://github.com/tyru/vivacious.vim'
-        call s:install_git_plugin(a:args[0], 1, s:vimbundle_dir())
+        let url = a:args[0]
+        call s:install_git_plugin(url, 1, s:vimbundle_dir())
+        let plug_name = matchstr(url, '[^/]\+\%(\.git\)\?$')
         let plug_dir = s:path_join(s:vimbundle_dir(),
-        \                          s:path_basename(a:args[0]))
-        call s:update_record(a:args[0], s:vimbundle_dir(), plug_dir, 1)
+        \                          s:path_basename(url))
+        let record = s:update_record(url, s:vimbundle_dir(), plug_dir, 1)
+        call s:lock_version(record, plug_name, plug_dir)
     else
         throw 'vivacious: VivaInstall: invalid arguments.'
     endif
@@ -110,9 +113,10 @@ endfunction
 function! s:install_github_plugin(arg) abort
     let url = 'https://github.com/' . a:arg
     call s:install_git_plugin(url, 1, s:vimbundle_dir())
-    let plug_dir = s:path_join(s:vimbundle_dir(),
-    \                          s:path_basename(a:arg))
-    call s:update_record(url, s:vimbundle_dir(), plug_dir, 1)
+    let plug_name = s:path_basename(a:arg)
+    let plug_dir  = s:path_join(s:vimbundle_dir(), plug_name)
+    let record = s:update_record(url, s:vimbundle_dir(), plug_dir, 1)
+    call s:lock_version(record, plug_name, plug_dir)
 endfunction
 
 function! s:install_git_plugin(url, redraw, vimbundle_dir) abort
@@ -143,6 +147,7 @@ function! s:install_git_plugin(url, redraw, vimbundle_dir) abort
     call s:info_msg(printf("Installed a plugin '%s'.", plug_name))
 endfunction
 
+" @return updated record
 function! s:update_record(url, vimbundle_dir, plug_dir, update, ...) abort
     " Record or Lock
     let plug_name = s:path_basename(a:plug_dir)
@@ -157,6 +162,7 @@ function! s:update_record(url, vimbundle_dir, plug_dir, update, ...) abort
         let record = s:make_record(plug_name, dir, a:url, 'git', ver)
         call s:do_record(record, vim_lockfile)
         call s:info_msg(printf("Recorded the plugin info of '%s'.", plug_name))
+        return record
     elseif a:update
         " Update version.
         call s:do_unrecord_by_name(plug_name, vim_lockfile)
@@ -167,16 +173,13 @@ function! s:update_record(url, vimbundle_dir, plug_dir, update, ...) abort
         call s:do_record(record, vim_lockfile)
         call s:info_msg(printf("Updated the version of '%s' (%s -> %s).",
         \               plug_name, old_record.version, record.version))
-    endif
-    if !a:update
-        " Lock the version.
-        call s:lock_version(a:plug_dir,
-        \                   (!empty(old_record) ? old_record : record),
-        \                   plug_name)
+        return record
+    else
+        return old_record
     endif
 endfunction
 
-function! s:lock_version(plug_dir, record, plug_name) abort
+function! s:lock_version(record, plug_name, plug_dir) abort
     call s:git({'work_tree': a:plug_dir,
     \           'args': ['checkout', a:record.version]})
     if v:shell_error
@@ -351,8 +354,10 @@ function! s:fetch_all_from_lockfile(lockfile) abort
             let plug_dir = s:abspath_record_dir(record.dir)
             let vimbundle_dir = s:path_dirname(plug_dir)
             call s:install_git_plugin(record.url, 0, vimbundle_dir)
+            let plug_name = s:path_basename(plug_dir)
             call s:update_record(record.url, vimbundle_dir,
             \                    plug_dir, 0, record.version)
+            call s:lock_version(record, plug_name, plug_dir)
         catch /vivacious: You already installed/
             " silently skip
         endtry
