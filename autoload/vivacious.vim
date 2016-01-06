@@ -171,8 +171,13 @@ function! s:update_record(url, vimbundle_dir, plug_dir, update, ...) abort
         \                'args': ['rev-parse', 'HEAD']})
         let record = s:make_record(plug_name, dir, a:url, 'git', ver)
         call s:do_record(record, vim_lockfile)
-        call s:info_msg(printf("Updated the version of '%s' (%s -> %s).",
-        \               plug_name, old_record.version, record.version))
+        if old_record.version ==# record.version
+            call s:info_msg(printf("The version of '%s' was unchanged (%s).",
+            \                       plug_name, record.version))
+        else
+            call s:info_msg(printf("Updated the version of '%s' (%s -> %s).",
+            \               plug_name, old_record.version, record.version))
+        endif
         return record
     else
         return old_record
