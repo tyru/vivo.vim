@@ -75,6 +75,11 @@ function! vivacious#update(...) abort
     \   'update', a:000, 'cmd_update_help')
 endfunction
 
+function! vivacious#manage(...) abort
+    call s:Vivacious.call_with_error_handlers(
+    \   'manage', a:000, 'cmd_manage_help')
+endfunction
+
 let s:Vivacious = {}
 let s:MetaInfo = {}
 let s:FS = {}
@@ -444,6 +449,37 @@ function! s:Vivacious_cmd_update_help() abort dict
     echo 'Updates all installed plugins.'
 endfunction
 call s:method('Vivacious', 'cmd_update_help')
+
+function! s:Vivacious_manage(args) abort dict
+    for plug_dir in s:FS.glob(a:args[0])
+        " Supported only Git repository.
+        if getftype(s:FS.join(plug_dir, '.git')) !=# ''
+            let branch = s:FS.git_current_branch(plug_dir)
+            if branch ==# ''
+                throw 'vivacious: Could not get current branch '
+                \   . "from '" . plug_dir . "'."
+            endif
+            let url = s:FS.git_upstream_of(branch, plug_dir)
+            if url !=# ''
+                call s:MetaInfo.update_record(url, plug_dir, 1)
+            else
+                throw 'vivacious: The repository does not have '
+                \   . "upstream for branch '" . branch . "' "
+                \   . "(" . plug_dir . ")."
+            endif
+        endif
+    endfor
+endfunction
+call s:method('Vivacious', 'manage')
+
+function! s:Vivacious_cmd_manage_help() abort dict
+    echo ' '
+    echo 'Usage: VivaciousManage {wildcard filepath}'
+    echo '       VivaciousManage ~/.vim/bundle/*'
+    echo ' '
+    echo 'Add existing installed plugins to lockfile.'
+endfunction
+call s:method('Vivacious', 'cmd_manage_help')
 
 function! s:Vivacious_http_get(url) abort dict
     if executable('curl')

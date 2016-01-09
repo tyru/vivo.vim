@@ -34,6 +34,8 @@ command! -bar -nargs=*
 \   VivaciousFetchAll call vivacious#fetch_all(<f-args>)
 command! -bar -nargs=*
 \   VivaciousUpdate call vivacious#update(<f-args>)
+command! -bar -nargs=*
+\   VivaciousManage call vivacious#manage(<f-args>)
 
 let &cpo = s:save_cpo
 unlet s:save_cpo
