@@ -362,11 +362,9 @@ function! s:Vivacious_fetch_all(args) abort dict
         let metafile = tempname()
         call writefile(split(content, '\r\?\n', 1), metafile)
     endif
-    let s:Msg.silent = 1
     try
         call s:Vivacious.fetch_all_from_metafile(metafile)
     finally
-        let s:Msg.silent = 0
         if metafile =~# s:HTTP_URL_RE
             call delete(metafile)
         endif
@@ -396,7 +394,9 @@ function! s:Vivacious_fetch_all_from_metafile(metafile) abort dict
             call s:Msg.info("You already installed '" . plug_name . "'.")
         endtry
     endfor
+    let s:Msg.silent = has('vim_starting')
     call s:Msg.info('VivaciousFetchAll: All plugins are installed!')
+    let s:Msg.silent = 0
 endfunction
 call s:method('Vivacious', 'fetch_all_from_metafile')
 
