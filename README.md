@@ -178,6 +178,9 @@ if has('vim_starting')
   " end
 endif
 
+" Fetch managed plugins from remote.
+call vivacious#fetch_all()
+
 " Add managed plugins to 'runtimepath'.
 " (It won't load disabled plugins)
 call vivacious#load_plugins()

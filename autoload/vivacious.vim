@@ -362,9 +362,11 @@ function! s:Vivacious_fetch_all(args) abort dict
         let metafile = tempname()
         call writefile(split(content, '\r\?\n', 1), metafile)
     endif
+    let s:Msg.silent = 1
     try
         call s:Vivacious.fetch_all_from_metafile(metafile)
     finally
+        let s:Msg.silent = 0
         if metafile =~# s:HTTP_URL_RE
             call delete(metafile)
         endif
@@ -380,6 +382,9 @@ function! s:Vivacious_fetch_all_from_metafile(metafile) abort dict
     let vimbundle_dir = s:FS.vimbundle_dir()
     for record in s:MetaInfo.get_records_from_file(a:metafile)
         let plug_dir = s:FS.abspath_record_dir(record.dir)
+        if isdirectory(plug_dir)
+            continue    " already installed, skip
+        endif
         let vimbundle_dir = s:FS.dirname(plug_dir)
         let plug_name = s:FS.basename(plug_dir)
         try
