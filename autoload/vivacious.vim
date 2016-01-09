@@ -132,7 +132,9 @@ function! s:Vivacious_call_with_error_handlers(mainfunc, args, helpfunc) abort d
         call self[a:helpfunc]()
     catch /^vivacious:/
         let e = substitute(v:exception, '^vivacious:\s*', '', '')
-        call s:Msg.error(e)
+        for line in split(e, '\n')
+            call s:Msg.error(line)
+        endfor
         call self[a:helpfunc]()
     catch
         call s:Msg.error('Internal error. '
@@ -465,7 +467,8 @@ function! s:Vivacious_manage(args) abort dict
             else
                 throw 'vivacious: The repository does not have '
                 \   . "upstream for branch '" . branch . "' "
-                \   . "(" . plug_dir . ")."
+                \   . "(" . plug_dir . ").\n"
+                \   . "Please set upstream for current branch by 'git branch -u origin/master master' for example."
             endif
         endif
     endfor
