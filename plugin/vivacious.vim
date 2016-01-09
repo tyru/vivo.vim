@@ -35,6 +35,7 @@ command! -bar -nargs=*
 command! -bar -nargs=*
 \   VivaciousUpdate call vivacious#update(<f-args>)
 command! -bar -nargs=*
+\   -complete=file
 \   VivaciousManage call vivacious#manage(<f-args>)
 
 let &cpo = s:save_cpo
