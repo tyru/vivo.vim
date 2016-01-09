@@ -1,5 +1,4 @@
 scriptencoding utf-8
-
 let s:save_cpo = &cpo
 set cpo&vim
 
@@ -29,7 +28,7 @@ function! vivacious#bundleconfig#load(...) abort
         \   "done": 0, "disabled": 0, "user": {},
         \}
     endfor
-    call s:bc_load()
+    call s:load_all_bundleconfig()
 
     unlet s:bundleconfig
     unlet s:loading_bundleconfig
@@ -76,81 +75,9 @@ function! vivacious#bundleconfig#complete_edit_bundleconfig(arglead, _l, _p)
 endfunction
 
 
-
-" let s:plugins = rtputil#new()
-" call s:plugins.reset()
-
-function! s:cmd_load_plugin(args, now)
-    for path in a:args
-        if !isdirectory(expand(path))
-            call s:Msg.error(path . ": no such a bundle directory")
-            return
-        endif
-        let nosufname = s:get_no_suffix_name(path)
-        let bcconf = {
-        \   'path': path, 'name': nosufname,
-        \   'done': 0, 'disabled': 0,
-        \   'user': {},
-        \}
-        " To load $MYVIMDIR/bundleconfig/<name>.vim
-        let s:bundleconfig[nosufname] = bcconf
-        if a:now
-            " Change 'runtimepath' immediately.
-            call rtputil#append(path)
-        else
-            " Change 'runtimepath' later.
-            " call s:plugins.append(path)
-        endif
-    endfor
-endfunction
-
-function! s:cmd_disable_plugin(args)
-    let pattern = a:args[0]
-    let nosufname = s:get_no_suffix_name(pattern)
-    " To load $MYVIMDIR/bundleconfig/<name>.vim
-    if has_key(s:bundleconfig, nosufname)
-        unlet s:bundleconfig[nosufname]
-    endif
-    " Change 'runtimepath' later.
-    " call s:plugins.remove('\<' . pattern . '\>')
-endfunction
-
-function! s:get_no_suffix_name(path)
-    let nosufname = substitute(a:path, '.*[/\\]', '', '')
-    let nosufname = substitute(nosufname, '\c[.-]vim$', '', '')
-    let nosufname = substitute(nosufname, '\c^vim[.-]', '', '')
-    return nosufname
-endfunction
-
-
-
-" See macros/bundleconfig_template.vim for each function.
-let s:BundleUserConfig = {}
-
-function! s:BundleUserConfig.config()
-endfunction
-
-function! s:BundleUserConfig.depends()
-    return []
-endfunction
-
-function! s:BundleUserConfig.recommends()
-    return []
-endfunction
-
-function! s:BundleUserConfig.depends_commands()
-    return []
-endfunction
-
-function! s:BundleUserConfig.recommends_commands()
-    return []
-endfunction
-
-
-
-function! s:bc_load()
+function! s:load_all_bundleconfig()
     for bcconf in values(s:bundleconfig)
-        call s:bc_do_source(bcconf)
+        call s:do_source(bcconf)
     endfor
     " Load in order?
     for name in keys(s:bundleconfig)
@@ -158,11 +85,11 @@ function! s:bc_load()
         if bcconf.done
             continue
         endif
-        call s:bc_do_load(bcconf)
+        call s:load_bundleconfig(bcconf)
     endfor
 endfunction
 
-function! s:bc_do_source(bcconf)
+function! s:do_source(bcconf)
     let s:loading_bundleconfig = a:bcconf
     try
         execute 'runtime! bundleconfig/' . a:bcconf.name . '/**/*.vim'
@@ -201,7 +128,7 @@ function! s:bc_do_source(bcconf)
     endtry
 endfunction
 
-function! s:bc_do_load(bcconf)
+function! s:load_bundleconfig(bcconf)
     if a:bcconf.disabled
         return 0
     endif
@@ -210,7 +137,7 @@ function! s:bc_do_load(bcconf)
             let depfail = []
             let depends = a:bcconf.user.depends()
             for depname in type(depends) is type([]) ? depends : [depends]
-                if !s:bc_do_load(s:bundleconfig[depname])
+                if !s:load_bundleconfig(s:bundleconfig[depname])
                     let depfail += [depname]
                 endif
             endfor
@@ -242,8 +169,37 @@ function! s:bc_do_load(bcconf)
     return 1
 endfunction
 
+function! s:get_no_suffix_name(path)
+    let nosufname = substitute(a:path, '.*[/\\]', '', '')
+    let nosufname = substitute(nosufname, '\c[.-]vim$', '', '')
+    let nosufname = substitute(nosufname, '\c^vim[.-]', '', '')
+    return nosufname
+endfunction
+
+
+" See macros/bundleconfig_template.vim for each function.
+let s:BundleUserConfig = {}
+
+function! s:BundleUserConfig.config()
+endfunction
+
+function! s:BundleUserConfig.depends()
+    return []
+endfunction
+
+function! s:BundleUserConfig.recommends()
+    return []
+endfunction
+
+function! s:BundleUserConfig.depends_commands()
+    return []
+endfunction
+
+function! s:BundleUserConfig.recommends_commands()
+    return []
+endfunction
+
 
 let &cpo = s:save_cpo
 unlet s:save_cpo
-
 " vim:set et:
