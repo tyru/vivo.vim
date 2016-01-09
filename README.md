@@ -169,10 +169,18 @@ if has('vim_starting')
   "   call system('git clone https://github.com/tyru/vivacious.vim.git ~/.vim/bundle/vivacious.vim')
   " end
 endif
+
+" Add managed plugins to 'runtimepath'.
+" (It won't load disabled plugins)
+call vivacious#load_plugins()
 filetype plugin indent on
 
-" Load plugins under '~/.vim/bundle/'.
-call vivacious#bundle()
+" Load all bundle configs in '~/.vim/bundleconfig/*.vim' (if you prefer).
+" This function loads plugin list from 'runtimepath'.
+call vivacious#bundleconfig#load()
+
+" Generate helptags for plugins in 'runtimepath'.
+call vivacious#helptags()
 ```
 
 
