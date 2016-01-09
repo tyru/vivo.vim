@@ -658,9 +658,6 @@ endfunction
 call s:method('MetaInfo', 'update_record')
 
 function! s:MetaInfo_expand_plug_name(wildcard, metafile) abort dict
-    if a:wildcard !~# '[*?]'
-        return [a:wildcard]
-    endif
     let records = s:MetaInfo.get_records_from_file(a:metafile)
     let candidates = map(records, 'v:val.name')
     " wildcard -> regexp
