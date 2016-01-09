@@ -45,7 +45,8 @@ function! vivacious#__complete_remove__(arglead, cmdline, cursorpos) abort
         \           s:MetaInfo.get_lockfile()), 'v:val.name')
     elseif a:arglead !=# ''    " has arguments
         if a:arglead =~# '[*?]'    " it has wildcard characters
-            return s:MetaInfo.expand_plug_name(a:arglead, s:MetaInfo.get_lockfile())
+            return s:MetaInfo.expand_plug_name(
+            \       a:arglead, s:MetaInfo.get_lockfile())
         endif
         " match by prefix
         let candidates = map(
@@ -101,7 +102,8 @@ endfunction
 
 
 
-let s:is_windows = has('win16') || has('win32') || has('win64') || has('win95')
+let s:is_windows = has('win16') || has('win32')
+\               || has('win64') || has('win95')
 let s:is_unix = has('unix')
 let s:NONE = []
 let s:GIT_URL_RE  = '^\%(https\?\|git\)://'
@@ -202,8 +204,8 @@ function! s:Vivacious_purge(args) abort dict
 endfunction
 call s:method('Vivacious', 'purge')
 
-function! s:Vivacious_uninstall_plugin_wildcard(wildcard, keep_record, lockfile) abort dict
-    let plug_name_list = s:MetaInfo.expand_plug_name(a:wildcard, a:lockfile)
+function! s:Vivacious_uninstall_plugin_wildcard(wildcard, keep_record, metafile) abort dict
+    let plug_name_list = s:MetaInfo.expand_plug_name(a:wildcard, a:metafile)
     if empty(plug_name_list)
         echo 'No matching plugins.'
         return
@@ -219,16 +221,16 @@ function! s:Vivacious_uninstall_plugin_wildcard(wildcard, keep_record, lockfile)
     " Uninstall all.
     for plug_name in plug_name_list
         call s:Vivacious.uninstall_plugin(
-        \       plug_name, a:keep_record, redraw, a:lockfile)
+        \       plug_name, a:keep_record, redraw, a:metafile)
     endfor
 endfunction
 call s:method('Vivacious', 'uninstall_plugin_wildcard')
 
-function! s:Vivacious_uninstall_plugin(plug_name, keep_record, redraw, lockfile) abort dict
+function! s:Vivacious_uninstall_plugin(plug_name, keep_record, redraw, metafile) abort dict
     let vimbundle_dir = s:FS.vimbundle_dir()
     let plug_dir = s:FS.join(vimbundle_dir, a:plug_name)
     let exists_dir = isdirectory(plug_dir)
-    let has_record = s:MetaInfo.has_record_name_of(a:plug_name, a:lockfile)
+    let has_record = s:MetaInfo.has_record_name_of(a:plug_name, a:metafile)
     if !exists_dir && !has_record
         throw "vivacious: '" . a:plug_name . "' is not installed."
     endif
@@ -236,11 +238,12 @@ function! s:Vivacious_uninstall_plugin(plug_name, keep_record, redraw, lockfile)
     if has_record && !a:keep_record
         let ver = s:FS.git({'work_tree': plug_dir,
         \                   'args': ['rev-parse', 'HEAD']})
-        call s:MetaInfo.do_unrecord_by_name(a:plug_name, a:lockfile)
+        call s:MetaInfo.do_unrecord_by_name(a:plug_name, a:metafile)
         if !exists_dir && a:redraw
             redraw    " before the last message
         endif
-        call s:Msg.info(printf("Unrecorded the plugin info of '%s'.", a:plug_name))
+        call s:Msg.info(printf(
+        \       "Unrecorded the plugin info of '%s'.", a:plug_name))
     endif
     " Remove the plugin directory.
     if exists_dir
@@ -249,7 +252,8 @@ function! s:Vivacious_uninstall_plugin(plug_name, keep_record, redraw, lockfile)
         if a:redraw
             redraw    " before the last message
         endif
-        call s:Msg.info(printf("Deleting the plugin directory '%s'... Done.", a:plug_name))
+        call s:Msg.info(printf(
+        \       "Deleting the plugin directory '%s'... Done.", a:plug_name))
     endif
 endfunction
 call s:method('Vivacious', 'uninstall_plugin')
@@ -519,11 +523,11 @@ function! s:MetaInfo_update_record(url, vimbundle_dir, plug_dir, init, ...) abor
 endfunction
 call s:method('MetaInfo', 'update_record')
 
-function! s:MetaInfo_expand_plug_name(wildcard, lockfile) abort dict
+function! s:MetaInfo_expand_plug_name(wildcard, metafile) abort dict
     if a:wildcard !~# '[*?]'
         return [a:wildcard]
     endif
-    let records = s:MetaInfo.get_records_from_file(a:lockfile)
+    let records = s:MetaInfo.get_records_from_file(a:metafile)
     let candidates = map(records, 'v:val.name')
     " wildcard -> regexp
     let re = substitute(a:wildcard, '\*', '.*', 'g')
@@ -539,67 +543,67 @@ function! s:MetaInfo_make_record(name, dir, url, type, version, branch, remote) 
 endfunction
 call s:method('MetaInfo', 'make_record')
 
-function! s:MetaInfo_do_record(record, lockfile) abort dict
-    let lines = s:MetaInfo.readfile(a:lockfile)
+function! s:MetaInfo_do_record(record, metafile) abort dict
+    let lines = s:MetaInfo.readfile(a:metafile)
     call s:MetaInfo.writefile(
-    \       lines + [s:MetaInfo.to_ltsv(a:record)], a:lockfile)
+    \       lines + [s:MetaInfo.to_ltsv(a:record)], a:metafile)
 endfunction
 call s:method('MetaInfo', 'do_record')
 
-" If lockfile doesn't exist, treat it as empty file.
-function! s:MetaInfo_do_unrecord_by_name(plug_name, lockfile) abort dict
-    if !filereadable(a:lockfile)
+" If metafile doesn't exist, treat it as empty file.
+function! s:MetaInfo_do_unrecord_by_name(plug_name, metafile) abort dict
+    if !filereadable(a:metafile)
         return
     endif
     " Get rid of the plugin info record which has a name of a:plug_name.
     let re = '\<name:' . a:plug_name . '\>'
-    let lines = filter(s:MetaInfo.readfile(a:lockfile), 'v:val !~# re')
-    call s:MetaInfo.writefile(lines, a:lockfile)
+    let lines = filter(s:MetaInfo.readfile(a:metafile), 'v:val !~# re')
+    call s:MetaInfo.writefile(lines, a:metafile)
 endfunction
 call s:method('MetaInfo', 'do_unrecord_by_name')
 
-" If lockfile doesn't exist, treat it as empty file.
-function! s:MetaInfo_readfile(lockfile) abort dict
-    if !filereadable(a:lockfile)
+" If metafile doesn't exist, treat it as empty file.
+function! s:MetaInfo_readfile(metafile) abort dict
+    if !filereadable(a:metafile)
         return []
     endif
-    let [ver; lines] = readfile(a:lockfile)
+    let [ver; lines] = readfile(a:metafile)
     let result = s:MetaInfo.parse_ltsv(ver)
     if !has_key(result, 'version')
         throw 'vivacious: fatal: s:MetaInfo.readfile(): '
         \   . 'Vivacious.lock file is corrupted.'
     endif
     if result.version > s:LOCKFILE_VERSION
-        throw 'vivacious: Too old vivacious.vim for parsing lockfile. '
+        throw 'vivacious: Too old vivacious.vim for parsing metafile. '
         \   . 'Please update the plugin.'
     endif
     return filter(lines, '!empty(v:val)')
 endfunction
 call s:method('MetaInfo', 'readfile')
 
-function! s:MetaInfo_writefile(lines, lockfile) abort dict
-    return writefile(["version:" . s:LOCKFILE_VERSION] + a:lines, a:lockfile)
+function! s:MetaInfo_writefile(lines, metafile) abort dict
+    return writefile(["version:" . s:LOCKFILE_VERSION] + a:lines, a:metafile)
 endfunction
 call s:method('MetaInfo', 'writefile')
 
-function! s:MetaInfo_get_record_by_name(name, lockfile) abort dict
-    let records = s:MetaInfo.get_records_from_file(a:lockfile)
+function! s:MetaInfo_get_record_by_name(name, metafile) abort dict
+    let records = s:MetaInfo.get_records_from_file(a:metafile)
     call filter(records, 'v:val.name ==# a:name')
     return get(records, 0, {})
 endfunction
 call s:method('MetaInfo', 'get_record_by_name')
 
-function! s:MetaInfo_has_record_name_of(name, lockfile) abort dict
-    return !empty(s:MetaInfo.get_record_by_name(a:name, a:lockfile))
+function! s:MetaInfo_has_record_name_of(name, metafile) abort dict
+    return !empty(s:MetaInfo.get_record_by_name(a:name, a:metafile))
 endfunction
 call s:method('MetaInfo', 'has_record_name_of')
 
-" If lockfile doesn't exist, treat it as empty file.
-function! s:MetaInfo_get_records_from_file(lockfile) abort dict
-    if !filereadable(a:lockfile)
+" If metafile doesn't exist, treat it as empty file.
+function! s:MetaInfo_get_records_from_file(metafile) abort dict
+    if !filereadable(a:metafile)
         return []
     endif
-    let records = map(s:MetaInfo.readfile(a:lockfile),
+    let records = map(s:MetaInfo.readfile(a:metafile),
     \                's:MetaInfo.get_records_from_ltsv(v:val)')
     return filter(records, '!empty(v:val)')
 endfunction
