@@ -22,6 +22,14 @@ function! vivacious#bundle(...)
     endfor
 endfunction
 
+function! vivacious#helptags(...)
+    for dir in s:globpath(&rtp, 'doc')
+        if filewritable(dir)    " Get rid of $VIMRUNTIME, and so on.
+            helptags `=dir`
+        endif
+    endfor
+endfunction
+
 function! vivacious#install(...)
     call s:call_with_error_handlers('s:install', a:000, 's:cmd_install_help')
 endfunction
@@ -634,8 +642,14 @@ function! s:source_plugin(plug_dir) abort
     endfor
 endfunction
 
+" TODO: Support older vim
 function! s:glob(expr) abort
     return glob(a:expr, 1, 1)
+endfunction
+
+" TODO: Support older vim
+function! s:globpath(path, expr) abort
+    return globpath(a:path, a:expr, 1, 1)
 endfunction
 
 function! s:shellescape(str) abort
