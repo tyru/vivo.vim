@@ -910,8 +910,12 @@ function! vivacious#get_msg() abort
     return s:Msg
 endfunction
 
+" If this flag is non-zero, all message functions do not echo at all.
+let s:Msg.silent = 0
+
 " TODO: More better highlight.
 function! s:Msg_info_nohist(msg, ...) abort dict
+    if s:Msg.silent | return | endif
     execute 'echohl' (a:0 ? a:1 : 'MoreMsg')
     if g:vivacious#debug
         echomsg 'vivacious:' a:msg
@@ -924,6 +928,7 @@ call s:method('Msg', 'info_nohist')
 
 " TODO: More better highlight.
 function! s:Msg_info(msg, ...) abort dict
+    if s:Msg.silent | return | endif
     execute 'echohl' (a:0 ? a:1 : 'MoreMsg')
     echomsg 'vivacious:' a:msg
     echohl None
@@ -931,6 +936,7 @@ endfunction
 call s:method('Msg', 'info')
 
 function! s:Msg_error(msg, ...) abort dict
+    if s:Msg.silent | return | endif
     execute 'echohl' (a:0 ? a:1 : 'ErrorMsg')
     echomsg 'vivacious:' a:msg
     echohl None
@@ -938,6 +944,7 @@ endfunction
 call s:method('Msg', 'error')
 
 function! s:Msg_debug(msg, ...) abort dict
+    if s:Msg.silent | return | endif
     if !g:vivacious#debug | return | endif
     execute 'echohl' (a:0 ? a:1 : 'WarningMsg')
     echomsg 'vivacious(DEBUG):' a:msg
