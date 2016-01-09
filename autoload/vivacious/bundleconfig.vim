@@ -4,11 +4,12 @@ set cpo&vim
 
 
 " Load dependencies.
-let s:MetaInfo = vivacious#get_metainfo()
 let s:Msg = vivacious#get_msg()
 let s:FS = vivacious#get_filesystem()
 
 
+" for vivacious#bundleconfig#new(),
+" s:bundleconfig and s:loading_bundleconfig cannot be local variables.
 let s:bundleconfig = {}
 let s:loading_bundleconfig = {}
 let s:loaded = 0
@@ -19,14 +20,16 @@ function! vivacious#bundleconfig#load(...) abort
         return
     endif
 
-    let lockfile = s:MetaInfo.get_lockfile()
-    for record in s:MetaInfo.get_records_from_file(lockfile)
-        let name = s:get_no_suffix_name(record.path)
-        let s:bundleconfig[name] = {
-        \   "name": name,
-        \   "path": record.path,
-        \   "done": 0, "disabled": 0, "user": {},
-        \}
+    for plug_dir in map(split(&rtp, ','), 'expand(v:val)')
+        if isdirectory(plug_dir)
+            let name = s:get_no_suffix_name(plug_dir)
+            if name !=# ''
+                let s:bundleconfig[name] = {
+                \   "name": name, "path": plug_dir,
+                \   "done": 0, "disabled": 0, "user": {},
+                \}
+            endif
+        endif
     endfor
     call s:load_all_bundleconfig()
 
