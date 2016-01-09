@@ -144,7 +144,7 @@ function! s:Vivacious_install(args) abort dict
         return self.cmd_install_help()
     endif
     if len(a:args) !=# 1
-        throw 'vivacious: VivaInstall: too few or too many arguments.'
+        throw 'vivacious: VivaciousInstall: too few or too many arguments.'
     endif
     if a:args[0] =~# '^[^/]\+/[^/]\+$'
         " 'tyru/vivacious.vim'
@@ -155,7 +155,7 @@ function! s:Vivacious_install(args) abort dict
         let url = a:args[0]
         call s:Vivacious.install_and_record(url, 1, s:FS.vimbundle_dir())
     else
-        throw 'vivacious: VivaInstall: invalid arguments.'
+        throw 'vivacious: VivaciousInstall: invalid arguments.'
     endif
 endfunction
 call s:method('Vivacious', 'install')
@@ -172,9 +172,9 @@ call s:method('Vivacious', 'install_and_record')
 
 function! s:Vivacious_cmd_install_help() abort dict
     echo ' '
-    echo 'Usage: VivaInstall <source>'
-    echo '       VivaInstall tyru/vivacious.vim'
-    echo '       VivaInstall https://github.com/tyru/vivacious.vim'
+    echo 'Usage: VivaciousInstall <source>'
+    echo '       VivaciousInstall tyru/vivacious.vim'
+    echo '       VivaciousInstall https://github.com/tyru/vivacious.vim'
 endfunction
 call s:method('Vivacious', 'cmd_install_help')
 
@@ -183,7 +183,7 @@ function! s:Vivacious_remove(args) abort dict
         return self.cmd_remove_help()
     endif
     if len(a:args) !=# 1 || a:args[0] !~# '^[^/\\]\+$'
-        throw 'vivacious: VivaRemove: invalid argument.'
+        throw 'vivacious: VivaciousRemove: invalid argument.'
     endif
     call s:Vivacious.uninstall_plugin_wildcard(
     \       a:args[0], 1, s:MetaInfo.get_lockfile())
@@ -195,7 +195,7 @@ function! s:Vivacious_purge(args) abort dict
         return self.cmd_purge_help()
     endif
     if len(a:args) !=# 1 || a:args[0] !~# '^[^/\\]\+$'
-        throw 'vivacious: VivaPurge: invalid argument.'
+        throw 'vivacious: VivaciousPurge: invalid argument.'
     endif
     call s:Vivacious.uninstall_plugin_wildcard(
     \           a:args[0], 0, s:MetaInfo.get_lockfile())
@@ -258,22 +258,22 @@ call s:method('Vivacious', 'uninstall_plugin')
 
 function! s:Vivacious_cmd_remove_help() abort dict
     echo ' '
-    echo 'Usage: VivaRemove <plugin name in bundle dir>'
-    echo '       VivaRemove vivacious.vim'
+    echo 'Usage: VivaciousRemove <plugin name in bundle dir>'
+    echo '       VivaciousRemove vivacious.vim'
     echo ' '
-    echo ':VivaRemove removes only a plugin directory.'
+    echo ':VivaciousRemove removes only a plugin directory.'
     echo 'It keeps a plugin info.'
-    echo 'After this command is executed, :VivaFetchAll can fetch a plugin directory again.'
+    echo 'After this command is executed, :VivaciousFetchAll can fetch a plugin directory again.'
 endfunction
 call s:method('Vivacious', 'cmd_remove_help')
 
 function! s:Vivacious_cmd_purge_help() abort dict
     echo ' '
-    echo 'Usage: VivaPurge <plugin name in bundle dir>'
-    echo '       VivaPurge vivacious.vim'
+    echo 'Usage: VivaciousPurge <plugin name in bundle dir>'
+    echo '       VivaciousPurge vivacious.vim'
     echo ' '
-    echo ':VivaPurge removes both a plugin directory and a plugin info.'
-    echo ':VivaFetchAll doesn''t help, all data about specified plugin are gone.'
+    echo ':VivaciousPurge removes both a plugin directory and a plugin info.'
+    echo ':VivaciousFetchAll doesn''t help, all data about specified plugin are gone.'
 endfunction
 call s:method('Vivacious', 'cmd_purge_help')
 
@@ -307,7 +307,7 @@ call s:method('Vivacious', 'list')
 
 function! s:Vivacious_cmd_list_help() abort dict
     echo ' '
-    echo 'Usage: VivaList'
+    echo 'Usage: VivaciousList'
     echo ' '
     echo 'Lists managed plugins including plugins which have been not fetched.'
 endfunction
@@ -352,14 +352,14 @@ function! s:Vivacious_fetch_all_from_metafile(metafile) abort dict
             call s:Msg.info("You already installed '" . plug_name . "'.")
         endtry
     endfor
-    call s:Msg.info('VivaFetchAll: All plugins are installed!')
+    call s:Msg.info('VivaciousFetchAll: All plugins are installed!')
 endfunction
 call s:method('Vivacious', 'fetch_all_from_metafile')
 
 function! s:Vivacious_cmd_fetch_all_help() abort dict
     echo ' '
-    echo 'Usage: VivaFetchAll [<Vivacious.lock>]'
-    echo '       VivaFetchAll /path/to/Vivacious.lock'
+    echo 'Usage: VivaciousFetchAll [<Vivacious.lock>]'
+    echo '       VivaciousFetchAll /path/to/Vivacious.lock'
     echo ' '
     echo 'If no arguments are given, ~/.vim/Vivacious.lock is used.'
 endfunction
@@ -440,7 +440,7 @@ call s:method('Vivacious', 'update')
 
 function! s:Vivacious_cmd_update_help() abort dict
     echo ' '
-    echo 'Usage: VivaUpdate'
+    echo 'Usage: VivaciousUpdate'
     echo ' '
     echo 'Updates all installed plugins.'
 endfunction
@@ -474,10 +474,10 @@ call s:method('MetaInfo', 'get_lockfile')
 
 " @return updated record
 " @param init (Boolean)
-"   non-zero (:VivaInstall)
+"   non-zero (:VivaciousInstall)
 "   * Bump version when the plugin is already recorded.
 "   * Save current branch before locking version.
-"   zero (:VivaFetchAll)
+"   zero (:VivaciousFetchAll)
 "   * Do not bump version when the plugin is already recorded.
 function! s:MetaInfo_update_record(url, vimbundle_dir, plug_dir, init, ...) abort dict
     " Record or Lock
@@ -661,7 +661,7 @@ function! s:FS_install_git_plugin(url, redraw, vimbundle_dir) abort dict
     if isdirectory(plug_dir)
         throw "vivacious: You already installed '" . plug_name . "'. "
         \   . "Please uninstall it by "
-        \   . ":VivaRemove or :VivaPurge."
+        \   . ":VivaciousRemove or :VivaciousPurge."
     endif
     " Fetch & Install
     call s:Msg.info_nohist(printf("Fetching a plugin from '%s'...", a:url))
