@@ -347,7 +347,7 @@ function! s:list(args) abort
             echomsg record.name . " (not fetched)"
             echohl None
         endif
-        echomsg "  Directory: " . s:abspath_record_dir(record.dir)
+        echomsg "  Directory: " . record.path
         echomsg "  Type: " . record.type
         echomsg "  URL: " . record.url
         echomsg "  Version: " . record.version
@@ -389,7 +389,7 @@ function! s:fetch_all_from_lockfile(lockfile) abort
     endif
     let vimbundle_dir = s:vimbundle_dir()
     for record in s:get_records_from_file(a:lockfile)
-        let plug_dir = s:abspath_record_dir(record.dir)
+        let plug_dir = record.path
         let vimbundle_dir = s:path_dirname(plug_dir)
         let plug_name = s:path_basename(plug_dir)
         try
@@ -416,7 +416,7 @@ function! s:update(args) abort
     " Pre-check and build git update commands.
     let update_cmd_list = []
     for record in s:get_records_from_file(s:get_lockfile())
-        let plug_dir = s:abspath_record_dir(record.dir)
+        let plug_dir = record.path
         if !isdirectory(plug_dir)
             call add(update_cmd_list,
             \   {'msg': printf("'%s' is not installed...skip.", record.name)})
@@ -560,8 +560,13 @@ function! s:get_records_from_file(lockfile) abort
     if !filereadable(a:lockfile)
         return []
     endif
-    let records = map(s:read_lockfile(a:lockfile), 's:parse_ltsv(v:val)')
-    return filter(records, '!empty(v:val)')
+    return map(s:read_lockfile(a:lockfile), 's:get_records_from_ltsv(v:val)')
+endfunction
+
+function! s:get_records_from_ltsv(line) abort
+    let records = filter(s:parse_ltsv(a:line), '!empty(v:val)')
+    return map(records,
+    \   'extend(v:val, {"path": s:abspath_record_dir(v:val.dir)})')
 endfunction
 
 " http://ltsv.org/
