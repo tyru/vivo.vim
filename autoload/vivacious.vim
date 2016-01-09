@@ -413,36 +413,15 @@ function! s:Vivacious_update(args) abort dict
             \   {'msg': printf("'%s' is not installed...skip.", record.name),
             \    'highlight': 'MoreMsg'})
         endif
-        " If the branch is detached state,
-        " See branch when git clone and recorded in Vivacious.lock.
-        let branch = s:FS.git_current_branch(plug_dir)
-        if branch =~# '^([^)]\+)$'
-            call s:Msg.debug(printf('%s: detached state (%s)',
-            \                       record.name, branch))
-            if !has_key(record, 'branch')
-            \   || !has_key(record, 'remote')
-                throw 'vivacious: The repository is detached state '
-                \   . 'but no tracking branch and upstream in Vivacious.lock'
-            endif
-            let branch = record.branch
-            let remote = record.remote
+        let pullinfo = s:FS.get_pullinfo(
+        \                   record.path, record.remote, record.branch)
+        if !empty(pullinfo)
             call add(update_cmd_list,
             \   {'name': record.name,
-            \    'work_tree': plug_dir, 'args': ['pull', remote, branch]})
-
-        " If the branch has a remote tracking branch, just git pull.
-        elseif s:FS.git_upstream_of(branch, plug_dir) !~# '^\s*$'
-            if g:vivacious#debug
-                call s:Msg.debug(printf('%s: upstream is set (%s)',
-                \   record.name, s:FS.git_upstream_of(branch, plug_dir)))
-            endif
-            call add(update_cmd_list,
-            \   {'name': record.name,
-            \    'work_tree': plug_dir, 'args': ['pull']})
-
-        " If the branch does not have a remote tracking branch,
-        " Shows an error.
+            \    'work_tree': plug_dir,
+            \    'args': ['pull', pullinfo.remote, pullinfo.branch]})
         else
+            " If the branch does not have a upstream, shows an error.
             call add(update_cmd_list,
             \   {'msg': printf("vivacious: couldn't find a way to "
             \                . "update plugin '%s'.", record.name),
@@ -491,20 +470,22 @@ function! s:Vivacious_manage(args) abort dict
     for plug_dir in s:FS.glob(a:args[0])
         " Supported only Git repository.
         if getftype(s:FS.join(plug_dir, '.git')) !=# ''
-            let branch = s:FS.git_current_branch(plug_dir)
-            if branch ==# ''
-                throw 'vivacious: Could not get current branch '
+            let pullinfo = s:FS.get_pullinfo(plug_dir)
+            if empty(pullinfo)
+                throw 'vivacious: Could not get upstream info '
                 \   . "from '" . plug_dir . "'."
             endif
-            let url = s:FS.git_upstream_of(branch, plug_dir)
-            if url !=# ''
-                call s:MetaInfo.update_record(url, plug_dir, 1)
-            else
-                throw 'vivacious: The repository does not have '
-                \   . "upstream for branch '" . branch . "' "
-                \   . "(" . plug_dir . ").\n"
-                \   . "Please set upstream for current branch by 'git branch -u origin/master master' for example."
+            let remote_list = split(s:FS.git({
+            \   'work_tree': plug_dir, 'args': ['remote', '-v']}), '\n')
+            let re = '^' . pullinfo.remote . '\s\+\(\S\+\)'
+            let idx = match(remote_list, re)
+            let url = (idx >=# 0 ? get(matchlist(remote_list[idx], re), 1, '')
+            \                    : '')
+            if idx <# 0 || url ==# ''
+                throw 'vivacious: Could not get URL from upstream '
+                \   . '(' . pullinfo.remote . ').'
             endif
+            call s:MetaInfo.update_record(url, plug_dir, 1)
         endif
     endfor
 endfunction
@@ -648,7 +629,6 @@ function! s:MetaInfo_update_record(url, plug_dir, update_existing, ...) abort di
         return record
     elseif a:update_existing
         " Bump version.
-        call s:MetaInfo.do_unrecord_by_name(plug_name, vim_lockfile)
         let dir = s:FS.join(s:FS.basename(vimbundle_dir), plug_name)
         let ver = s:FS.git({'work_tree': a:plug_dir,
         \                   'args': ['rev-parse', 'HEAD']})
@@ -658,6 +638,7 @@ function! s:MetaInfo_update_record(url, plug_dir, update_existing, ...) abort di
         if !empty(opt_record)
             call extend(record, opt_record, 'force')
         endif
+        call s:MetaInfo.do_unrecord_by_name(plug_name, vim_lockfile)
         call s:MetaInfo.do_record(record, vim_lockfile)
         if old_record.version ==# record.version
             call s:Msg.info(printf("The version of '%s' was unchanged (%s).",
@@ -706,8 +687,9 @@ function! s:MetaInfo_do_unrecord_by_name(plug_name, metafile) abort dict
         return
     endif
     " Get rid of the plugin info record which has a name of a:plug_name.
-    let re = '\<name:' . a:plug_name . '\>'
-    let lines = filter(s:MetaInfo.readfile(a:metafile), 'v:val !~# re')
+    let records = filter(s:MetaInfo.get_records_from_file(a:metafile),
+    \                 'v:val.name !=# a:plug_name')
+    let lines = map(records, 's:MetaInfo.to_ltsv(v:val)')
     call s:MetaInfo.writefile(lines, a:metafile)
 endfunction
 call s:method('MetaInfo', 'do_unrecord_by_name')
@@ -960,6 +942,44 @@ function! s:FS_git_upstream_of(branch, work_tree) abort dict
     \                'work_tree': a:work_tree})
 endfunction
 call s:method('FS', 'git_upstream_of')
+
+function! s:FS_get_pullinfo(plug_dir, ...) abort
+    " If the branch is detached state,
+    " See branch when git clone and recorded in Vivacious.lock.
+    let plug_name = s:FS.basename(a:plug_dir)
+    let branch = s:FS.git_current_branch(a:plug_dir)
+    if branch =~# '^([^)]\+)$'
+        if a:0 ==# 2
+            let [remote, branch] = a:000
+        else
+            let record = s:MetaInfo.get_record_by_name(
+            \               plug_name, s:MetaInfo.get_lockfile())
+            if empty(record)
+                throw "vivacious: fatal: s:FS.get_pullinfo(): "
+                \   . "Could not find record for '" . plug_name . "'."
+            endif
+            let [remote, branch] = [record.remote, record.branch]
+        endif
+        call s:Msg.debug(printf('%s: detached state (%s)',
+        \                       plug_name, branch))
+        return {'remote': remote, 'branch': branch}
+
+    " If the branch has a remote tracking branch
+    else
+        let remote = s:FS.git_upstream_of(branch, a:plug_dir)
+        if remote !~# '^\s*$'
+            if g:vivacious#debug
+                call s:Msg.debug(printf('%s: upstream is set (%s)',
+                \   plug_name, s:FS.git_upstream_of(branch, a:plug_dir)))
+            endif
+            return {'remote': remote, 'branch': branch}
+        else
+            " Error
+            return {}
+        endif
+    endif
+endfunction
+call s:method('FS', 'get_pullinfo')
 
 function! s:FS_vim_dir() abort dict
     if exists('$HOME')
