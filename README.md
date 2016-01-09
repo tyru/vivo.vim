@@ -22,12 +22,20 @@ This plugin is designed for the following policies.
   * Okay, leave all stuffs about plugin management to vivacious.
     You don't need to concern about them.
   * It shouldn't be there(.vimrc)!!!
-5. I don't want to write plugins' configurations in .vimrc, too! (TODO)
+5. I don't want to write plugins' configurations in .vimrc, too!
   * It is **painful** to remove the configurations by hand after you uninstall a plugin...
   * By default, a configuration file per a plugin is `~/.vim/bundleconfig/<plugin name>.vim`.
   * It also shouldn't be there! isn't it?
-6. Keep It Simple, Stupid
+6. Thin wrapper plugin for external command (TODO)
+  * If a vim plugin gets bigger, the code should be split into external command.
+  * Because calling external command doesn't have severe impact on your vim memory usage.
+  * It also keeps your vim rapid because it can avoid the problems like memory leak, memory thrashing.
+  * Of cource, if the code is real-time processing, it should not be split.
+7. Stable, and Well-tested (TODO)
+  * Plugin manager should be tested deeply and stable.
+8. Keep It Simple, Stupid
   * Vivacious doesn't slow down your vim startup, and not support any features not in this policies.
+
 
 # How it works
 
