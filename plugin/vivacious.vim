@@ -14,6 +14,11 @@ if !executable('git')
     echohl None
 endif
 
+command! -bar -nargs=+
+\   -complete=customlist,vivacious#bundleconfig#complete_edit_bundleconfig
+\   VivaciousEditBundleConfig
+\   call vivacious#bundleconfig#edit_bundleconfig(<f-args>)
+
 command! -bar -nargs=*
 \   VivaciousInstall call vivacious#install(<f-args>)
 command! -bar -nargs=*
