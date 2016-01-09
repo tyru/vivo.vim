@@ -11,7 +11,7 @@ let s:LOCKFILE_VERSION = 1
 function! vivacious#load_plugins(...)
     let lockfile = s:MetaInfo.get_lockfile()
     for record in s:MetaInfo.get_records_from_file(lockfile)
-        if isdirectory(record.path)
+        if isdirectory(record.path) && record.active
             " Keep runtimepath short as possible.
             let path = fnamemodify(record.path, ':~')
             let &rtp = join([&rtp, path], ',')
@@ -37,7 +37,7 @@ function! vivacious#remove(...) abort
     \       'remove', a:000, 'cmd_remove_help')
 endfunction
 
-function! vivacious#__complete_remove__(arglead, cmdline, cursorpos) abort
+function! vivacious#__complete_plug_name__(arglead, cmdline, cursorpos) abort
     if a:cmdline !~# '^[A-Z]\w*\s\+.\+$'    " no args
         return map(s:MetaInfo.get_records_from_file(
         \           s:MetaInfo.get_lockfile()), 'v:val.name')
@@ -79,6 +79,17 @@ function! vivacious#manage(...) abort
     call s:Vivacious.call_with_error_handlers(
     \   'manage', a:000, 'cmd_manage_help')
 endfunction
+
+function! vivacious#enable(...) abort
+    call s:Vivacious.call_with_error_handlers(
+    \   'enable', a:000, 'cmd_enable_help')
+endfunction
+
+function! vivacious#disable(...) abort
+    call s:Vivacious.call_with_error_handlers(
+    \   'disable', a:000, 'cmd_disable_help')
+endfunction
+
 
 let s:Vivacious = {}
 let s:MetaInfo = {}
@@ -295,9 +306,15 @@ function! s:Vivacious_list(args) abort dict
     for record in records
         let plug_dir = s:FS.join(vimbundle_dir, record.name)
         if isdirectory(plug_dir)
-            echohl MoreMsg
-            echomsg record.name
-            echohl None
+            if record.active
+                echohl MoreMsg
+                echomsg record.name
+                echohl None
+            else
+                echohl WarningMsg
+                echomsg record.name . ' (inactive)'
+                echohl None
+            endif
         else
             echohl WarningMsg
             echomsg record.name . " (not fetched)"
@@ -354,7 +371,7 @@ function! s:Vivacious_fetch_all_from_metafile(metafile) abort dict
         try
             call s:FS.install_git_plugin(record.url, 0, vimbundle_dir)
             call s:MetaInfo.update_record(
-            \       record.url, plug_dir, 0, record.version)
+            \       record.url, plug_dir, 0, {'version': record.version})
             call s:FS.lock_version(record, plug_name, plug_dir)
         catch /vivacious: You already installed/
             call s:Msg.info("You already installed '" . plug_name . "'.")
@@ -486,6 +503,78 @@ function! s:Vivacious_cmd_manage_help() abort dict
 endfunction
 call s:method('Vivacious', 'cmd_manage_help')
 
+function! s:Vivacious_enable(args) abort
+    let vim_lockfile = s:MetaInfo.get_lockfile()
+    let wildcard = a:args[0]
+    for plug_name in s:MetaInfo.expand_plug_name(wildcard, vim_lockfile)
+        let record = s:MetaInfo.get_record_by_name(plug_name, vim_lockfile)
+        if empty(record)
+            call s:Msg.warn("'" . plug_name . "' is ignored because "
+            \   . "it is not a managed plugin name.")
+            continue
+        endif
+        if record.active
+            call s:Msg.warn("'" . plug_name . "' is already active.")
+            continue
+        endif
+        let s:Msg.silent = 1
+        try
+            call s:MetaInfo.update_record(
+            \       record.url, record.path, 1, {'active': 1})
+        finally
+            let s:Msg.silent = 0
+        endtry
+        call s:Msg.info(printf("Enabled plugin '%s'.", plug_name))
+    endfor
+endfunction
+call s:method('Vivacious', 'enable')
+
+function! s:Vivacious_cmd_enable_help() abort dict
+    echo ' '
+    echo 'Usage: VivaciousEnable <plugin name in bundle dir>'
+    echo '       VivaciousEnable vivacious.vim'
+    echo '       VivaciousEnable *'
+    echo ' '
+    echo 'Enable managed plugins.'
+endfunction
+call s:method('Vivacious', 'cmd_enable_help')
+
+function! s:Vivacious_disable(args) abort
+    let vim_lockfile = s:MetaInfo.get_lockfile()
+    let wildcard = a:args[0]
+    for plug_name in s:MetaInfo.expand_plug_name(wildcard, vim_lockfile)
+        let record = s:MetaInfo.get_record_by_name(plug_name, vim_lockfile)
+        if empty(record)
+            call s:Msg.warn("'" . plug_name . "' is ignored because "
+            \   . "it is not a managed plugin name.")
+            continue
+        endif
+        if !record.active
+            call s:Msg.warn("'" . plug_name . "' is already inactive.")
+            continue
+        endif
+        let s:Msg.silent = 1
+        try
+            call s:MetaInfo.update_record(
+            \       record.url, record.path, 1, {'active': 0})
+        finally
+            let s:Msg.silent = 0
+        endtry
+        call s:Msg.info(printf("Disabled plugin '%s'.", plug_name))
+    endfor
+endfunction
+call s:method('Vivacious', 'disable')
+
+function! s:Vivacious_cmd_disable_help() abort dict
+    echo ' '
+    echo 'Usage: VivaciousDisable <plugin name in bundle dir>'
+    echo '       VivaciousDisable vivacious.vim'
+    echo '       VivaciousDisable *'
+    echo ' '
+    echo 'Disable managed plugins.'
+endfunction
+call s:method('Vivacious', 'cmd_disable_help')
+
 function! s:Vivacious_http_get(url) abort dict
     if executable('curl')
         return system('curl -L -s -k ' . s:FS.shellescape(a:url))
@@ -513,32 +602,35 @@ endfunction
 call s:method('MetaInfo', 'get_lockfile')
 
 " @return updated record
-" @param init (Boolean)
+" @param update_existing (Boolean)
 "   non-zero (:VivaciousInstall)
-"   * Bump version when the plugin is already recorded.
-"   * Save current branch before locking version.
+"   * Update a record even if the plugin is already recorded.
 "   zero (:VivaciousFetchAll)
-"   * Do not bump version when the plugin is already recorded.
-function! s:MetaInfo_update_record(url, plug_dir, init, ...) abort dict
-    " Record or Lock
+"   * Don't update a record.
+function! s:MetaInfo_update_record(url, plug_dir, update_existing, ...) abort dict
+    let opt_record = (a:0 && type(a:1) ==# type({}) ? a:1 : {})
     let vimbundle_dir = s:FS.dirname(a:plug_dir)
     let plug_name = s:FS.basename(a:plug_dir)
     let vim_lockfile = s:MetaInfo.get_lockfile()
     let old_record = s:MetaInfo.get_record_by_name(plug_name, vim_lockfile)
+    " Record or Lock
     if empty(old_record)
         " If the record is not found, record the plugin info.
         let dir = s:FS.join(s:FS.basename(vimbundle_dir), plug_name)
-        let ver = (a:0 ? a:1 :
+        let ver = (has_key(opt_record, 'version') ? opt_record.version :
         \           s:FS.git({'work_tree': a:plug_dir,
         \                     'args': ['rev-parse', 'HEAD']}))
         let branch = s:FS.git_current_branch(a:plug_dir)
         let remote = s:FS.git_upstream_of(branch, a:plug_dir)
         let record = s:MetaInfo.make_record(plug_name, dir, a:url, 'git',
-        \                                   ver, branch, remote)
+        \                                   ver, branch, remote, 1)
+        if !empty(opt_record)
+            call extend(record, opt_record, 'force')
+        endif
         call s:MetaInfo.do_record(record, vim_lockfile)
         call s:Msg.info(printf("Recorded the plugin info of '%s'.", plug_name))
         return record
-    elseif a:init
+    elseif a:update_existing
         " Bump version.
         call s:MetaInfo.do_unrecord_by_name(plug_name, vim_lockfile)
         let dir = s:FS.join(s:FS.basename(vimbundle_dir), plug_name)
@@ -546,7 +638,10 @@ function! s:MetaInfo_update_record(url, plug_dir, init, ...) abort dict
         \                   'args': ['rev-parse', 'HEAD']})
         let record = s:MetaInfo.make_record(
         \               plug_name, dir, a:url, 'git', ver,
-        \               old_record.branch, old_record.remote)
+        \               old_record.branch, old_record.remote, 1)
+        if !empty(opt_record)
+            call extend(record, opt_record, 'force')
+        endif
         call s:MetaInfo.do_record(record, vim_lockfile)
         if old_record.version ==# record.version
             call s:Msg.info(printf("The version of '%s' was unchanged (%s).",
@@ -575,10 +670,10 @@ function! s:MetaInfo_expand_plug_name(wildcard, metafile) abort dict
 endfunction
 call s:method('MetaInfo', 'expand_plug_name')
 
-function! s:MetaInfo_make_record(name, dir, url, type, version, branch, remote) abort dict
+function! s:MetaInfo_make_record(name, dir, url, type, version, branch, remote, active) abort dict
     return {'name': a:name, 'dir': a:dir, 'url': a:url,
     \       'type': a:type, 'version': a:version, 'branch': a:branch,
-    \       'remote': a:remote}
+    \       'remote': a:remote, 'active': a:active}
 endfunction
 call s:method('MetaInfo', 'make_record')
 
@@ -936,6 +1031,14 @@ function! s:Msg_info(msg, ...) abort dict
     echohl None
 endfunction
 call s:method('Msg', 'info')
+
+function! s:Msg_warn(msg, ...) abort dict
+    if s:Msg.silent | return | endif
+    execute 'echohl' (a:0 ? a:1 : 'WarningMsg')
+    echomsg 'vivacious:' a:msg
+    echohl None
+endfunction
+call s:method('Msg', 'warn')
 
 function! s:Msg_error(msg, ...) abort dict
     if s:Msg.silent | return | endif

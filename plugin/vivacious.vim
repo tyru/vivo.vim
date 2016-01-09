@@ -22,10 +22,10 @@ command! -bar -nargs=+
 command! -bar -nargs=*
 \   VivaciousInstall call vivacious#install(<f-args>)
 command! -bar -nargs=*
-\   -complete=customlist,vivacious#__complete_remove__
+\   -complete=customlist,vivacious#__complete_plug_name__
 \   VivaciousRemove call vivacious#remove(<f-args>)
 command! -bar -nargs=*
-\   -complete=customlist,vivacious#__complete_remove__
+\   -complete=customlist,vivacious#__complete_plug_name__
 \   VivaciousPurge call vivacious#purge(<f-args>)
 command! -bar -nargs=*
 \   VivaciousList call vivacious#list(<f-args>)
@@ -37,6 +37,12 @@ command! -bar -nargs=*
 command! -bar -nargs=*
 \   -complete=file
 \   VivaciousManage call vivacious#manage(<f-args>)
+command! -bar -nargs=*
+\   -complete=customlist,vivacious#__complete_plug_name__
+\   VivaciousEnable call vivacious#enable(<f-args>)
+command! -bar -nargs=*
+\   -complete=customlist,vivacious#__complete_plug_name__
+\   VivaciousDisable call vivacious#disable(<f-args>)
 
 let &cpo = s:save_cpo
 unlet s:save_cpo

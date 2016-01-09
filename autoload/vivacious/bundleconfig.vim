@@ -140,14 +140,15 @@ function! s:load_bundleconfig(bcconf)
             let depfail = []
             let depends = a:bcconf.user.depends()
             for depname in type(depends) is type([]) ? depends : [depends]
-                if !s:load_bundleconfig(s:bundleconfig[depname])
+                if !has_key(s:bundleconfig, depname) ||
+                \   !s:load_bundleconfig(s:bundleconfig[depname])
                     let depfail += [depname]
                 endif
             endfor
             if !empty(depfail)
                 call s:Msg.error("Stop loading '" . a:bcconf.name . "' " .
-                \                "due to load failed/disabled depending " .
-                \                "plugin(s) [" . join(depfail, ', ') . "]")
+                \                "because cannot fulfilling requirements " .
+                \                "[" . join(depfail, ', ') . "]")
                 return 0
             endif
         endif
