@@ -11,9 +11,10 @@ let s:LOCKFILE_VERSION = 1
 function! vivacious#load_plugins(...)
     let lockfile = s:MetaInfo.get_lockfile()
     for record in s:MetaInfo.get_records_from_file(lockfile)
-        if isdirectory(record.path) && record.active
+        let plug_dir = s:FS.abspath_record_dir(record.dir)
+        if isdirectory(plug_dir) && record.active
             " Keep runtimepath short as possible.
-            let path = fnamemodify(record.path, ':~')
+            let path = fnamemodify(plug_dir, ':~')
             let &rtp = join([&rtp, path], ',')
         endif
     endfor
@@ -333,7 +334,7 @@ function! s:Vivacious_list(args) abort dict
             echomsg record.name . " (not fetched)"
             echohl None
         endif
-        echomsg "  Directory: " . record.path
+        echomsg "  Directory: " . s:FS.abspath_record_dir(record.dir)
         echomsg "  Type: " . record.type
         echomsg "  URL: " . record.url
         echomsg "  Version: " . record.version
@@ -378,7 +379,7 @@ function! s:Vivacious_fetch_all_from_metafile(metafile) abort dict
     endif
     let vimbundle_dir = s:FS.vimbundle_dir()
     for record in s:MetaInfo.get_records_from_file(a:metafile)
-        let plug_dir = record.path
+        let plug_dir = s:FS.abspath_record_dir(record.dir)
         let vimbundle_dir = s:FS.dirname(plug_dir)
         let plug_name = s:FS.basename(plug_dir)
         try
@@ -407,14 +408,14 @@ function! s:Vivacious_update(args) abort dict
     " Pre-check and build git update commands.
     let update_cmd_list = []
     for record in s:MetaInfo.get_records_from_file(s:MetaInfo.get_lockfile())
-        let plug_dir = record.path
+        let plug_dir = s:FS.abspath_record_dir(record.dir)
         if !isdirectory(plug_dir)
             call add(update_cmd_list,
             \   {'msg': printf("'%s' is not installed...skip.", record.name),
             \    'highlight': 'MoreMsg'})
         endif
         let pullinfo = s:FS.get_pullinfo(
-        \                   record.path, record.remote, record.branch)
+        \                   plug_dir, record.remote, record.branch)
         if !empty(pullinfo)
             call add(update_cmd_list,
             \   {'name': record.name,
@@ -517,7 +518,8 @@ function! s:Vivacious_enable(args) abort
         let s:Msg.silent = 1
         try
             call s:MetaInfo.update_record(
-            \       record.url, record.path, 1, {'active': 1})
+            \       record.url, s:FS.abspath_record_dir(record.dir), 1,
+            \       {'active': 1})
         finally
             let s:Msg.silent = 0
         endtry
@@ -553,7 +555,8 @@ function! s:Vivacious_disable(args) abort
         let s:Msg.silent = 1
         try
             call s:MetaInfo.update_record(
-            \       record.url, record.path, 1, {'active': 0})
+            \       record.url, s:FS.abspath_record_dir(record.dir), 1,
+            \       {'active': 0})
         finally
             let s:Msg.silent = 0
         endtry
@@ -736,19 +739,10 @@ function! s:MetaInfo_get_records_from_file(metafile) abort dict
         return []
     endif
     let records = map(s:MetaInfo.readfile(a:metafile),
-    \                's:MetaInfo.get_records_from_ltsv(v:val)')
+    \                's:MetaInfo.parse_ltsv(v:val)')
     return filter(records, '!empty(v:val)')
 endfunction
 call s:method('MetaInfo', 'get_records_from_file')
-
-function! s:MetaInfo_get_records_from_ltsv(line) abort dict
-    let record = s:MetaInfo.parse_ltsv(a:line)
-    if empty(record)
-        return {}
-    endif
-    return extend(record, {"path": s:FS.abspath_record_dir(record.dir)})
-endfunction
-call s:method('MetaInfo', 'get_records_from_ltsv')
 
 " http://ltsv.org/
 function! s:MetaInfo_to_ltsv(dict) abort dict
