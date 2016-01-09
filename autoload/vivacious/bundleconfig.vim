@@ -60,7 +60,10 @@ function! vivacious#bundleconfig#edit_bundleconfig(name, ...)
         silent read `=template`
         silent 1 delete _
         let plugname = fnamemodify(filename, ':t:r')
+        let plugvarname = substitute(plugname, '\W', '', 'g')
+        let plugvarname = substitute(plugvarname, '^[0-9]\+', '', 'g')
         silent %s/<PLUGNAME>/\=plugname/ige
+        silent %s/<PLUGVARNAME>/\=plugvarname/ige
     endif
 endfunction
 
