@@ -382,9 +382,11 @@ function! s:Vivo_fetch_all(args) abort dict
         let metafile = tempname()
         call writefile(split(content, '\r\?\n', 1), metafile)
     endif
+    let s:Msg.silent = 1
     try
         call s:Vivo.fetch_all_from_metafile(metafile)
     finally
+        let s:Msg.silent = 0
         if metafile =~# s:HTTP_URL_RE
             call delete(metafile)
         endif
