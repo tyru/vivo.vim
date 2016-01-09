@@ -249,12 +249,15 @@ function! s:Vivacious_uninstall_plugin(plug_name, keep_record, redraw, metafile)
     if !exists_dir && !has_record
         throw "vivacious: '" . a:plug_name . "' is not installed."
     endif
+    let bundleconfig = s:FS.join(s:FS.vimbundleconfig_dir(),
+    \                            a:plug_name . '.vim')
+    let has_bundleconfig = filereadable(bundleconfig)
     " Remove the plugin info.
     if has_record && !a:keep_record
         let ver = s:FS.git({'work_tree': plug_dir,
         \                   'args': ['rev-parse', 'HEAD']})
         call s:MetaInfo.do_unrecord_by_name(a:plug_name, a:metafile)
-        if !exists_dir && a:redraw
+        if !exists_dir && !has_bundleconfig && a:redraw
             redraw    " before the last message
         endif
         call s:Msg.info(printf(
@@ -264,11 +267,21 @@ function! s:Vivacious_uninstall_plugin(plug_name, keep_record, redraw, metafile)
     if exists_dir
         call s:Msg.info_nohist(printf("Deleting the plugin directory '%s'...", a:plug_name))
         call s:FS.delete_dir(plug_dir)
-        if a:redraw
+        if !has_bundleconfig && a:redraw
             redraw    " before the last message
         endif
         call s:Msg.info(printf(
         \       "Deleting the plugin directory '%s'... Done.", a:plug_name))
+    endif
+    if has_bundleconfig
+        call s:Msg.info_nohist(printf(
+        \       "Deleting the bundleconfig file of '%s'...", a:plug_name))
+        call delete(bundleconfig)
+        if a:redraw
+            redraw    " before the last message
+        endif
+        call s:Msg.info(printf(
+        \       "Deleting the bundleconfig file of '%s'... Done.", a:plug_name))
     endif
 endfunction
 call s:method('Vivacious', 'uninstall_plugin')
@@ -970,6 +983,11 @@ function! s:FS_vimbundle_dir() abort dict
     return s:FS.join(s:FS.vim_dir(), 'bundle')
 endfunction
 call s:method('FS', 'vimbundle_dir')
+
+function! s:FS_vimbundleconfig_dir() abort dict
+    return s:FS.join(s:FS.vim_dir(), 'bundle')
+endfunction
+call s:method('FS', 'vimbundleconfig_dir')
 
 let s:PATH_SEP = s:is_windows ? '\' : '/'
 function! s:FS_join(...) abort dict
