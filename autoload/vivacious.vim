@@ -397,7 +397,8 @@ function! s:Vivacious_update(args) abort dict
         let plug_dir = record.path
         if !isdirectory(plug_dir)
             call add(update_cmd_list,
-            \   {'msg': printf("'%s' is not installed...skip.", record.name)})
+            \   {'msg': printf("'%s' is not installed...skip.", record.name),
+            \    'highlight': 'MoreMsg'})
         endif
         " If the branch is detached state,
         " See branch when git clone and recorded in Vivacious.lock.
@@ -429,16 +430,18 @@ function! s:Vivacious_update(args) abort dict
         " If the branch does not have a remote tracking branch,
         " Shows an error.
         else
-            call s:Msg.debug(printf(
-            \   "%s: couldn't find a way to update plugin", record.name))
-            throw printf("vivacious: couldn't find a way to "
-            \          . "update plugin '%s'.", record.name)
+            call add(update_cmd_list,
+            \   {'msg': printf("vivacious: couldn't find a way to "
+            \                . "update plugin '%s'.", record.name),
+            \    'highlight': 'WarningMsg'})
+            call s:Msg.debug(printf("vivacious: couldn't find a way to "
+            \                . "update plugin '%s'.", record.name))
         endif
     endfor
     " Update all plugins.
     for cmd in update_cmd_list
         if has_key(cmd, 'msg')
-            call s:Msg.info(cmd.msg)
+            call s:Msg.info(cmd.msg, cmd.highlight)
         else
             let name = remove(cmd, 'name')
             call s:Msg.info_nohist(printf('%s: Updating...', name), 'Normal')
