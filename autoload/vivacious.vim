@@ -9,14 +9,12 @@ let g:vivacious#debug = get(g:, 'vivacious#debug', 0)
 let s:LOCKFILE_VERSION = 1
 
 function! vivacious#load_plugins(...)
-    let vimbundle_dir = (a:0 ? a:1 : s:FS.vimbundle_dir())
-    if !isdirectory(vimbundle_dir)
-        " No plugins are installed... silently ignore.
-        return
-    endif
-    for plug_dir in s:FS.glob(s:FS.join(vimbundle_dir, '*'))
-        if isdirectory(plug_dir)
-            let &rtp = join([&rtp, plug_dir], ',')
+    let lockfile = s:MetaInfo.get_lockfile()
+    for record in s:MetaInfo.get_records_from_file(lockfile)
+        if isdirectory(record.path)
+            " Keep runtimepath short as possible.
+            let path = fnamemodify(record.path, ':~')
+            let &rtp = join([&rtp, path], ',')
         endif
     endfor
 endfunction
