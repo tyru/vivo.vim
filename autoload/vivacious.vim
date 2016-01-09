@@ -164,8 +164,7 @@ function! s:Vivacious_install_and_record(url, redraw, vimbundle_dir) abort dict
     call s:FS.install_git_plugin(a:url, a:redraw, a:vimbundle_dir)
     let plug_name = matchstr(a:url, '[^/]\+\%(\.git\)\?$')
     let plug_dir = s:FS.join(a:vimbundle_dir, plug_name)
-    let record = s:MetaInfo.update_record(
-    \               a:url, a:vimbundle_dir, plug_dir, 1)
+    let record = s:MetaInfo.update_record(a:url, plug_dir, 1)
     call s:FS.lock_version(record, plug_name, plug_dir)
 endfunction
 call s:method('Vivacious', 'install_and_record')
@@ -345,8 +344,8 @@ function! s:Vivacious_fetch_all_from_metafile(metafile) abort dict
         let plug_name = s:FS.basename(plug_dir)
         try
             call s:FS.install_git_plugin(record.url, 0, vimbundle_dir)
-            call s:MetaInfo.update_record(record.url, vimbundle_dir,
-            \                             plug_dir, 0, record.version)
+            call s:MetaInfo.update_record(
+            \       record.url, plug_dir, 0, record.version)
             call s:FS.lock_version(record, plug_name, plug_dir)
         catch /vivacious: You already installed/
             call s:Msg.info("You already installed '" . plug_name . "'.")
@@ -479,14 +478,15 @@ call s:method('MetaInfo', 'get_lockfile')
 "   * Save current branch before locking version.
 "   zero (:VivaciousFetchAll)
 "   * Do not bump version when the plugin is already recorded.
-function! s:MetaInfo_update_record(url, vimbundle_dir, plug_dir, init, ...) abort dict
+function! s:MetaInfo_update_record(url, plug_dir, init, ...) abort dict
     " Record or Lock
+    let vimbundle_dir = s:FS.dirname(a:plug_dir)
     let plug_name = s:FS.basename(a:plug_dir)
     let vim_lockfile = s:MetaInfo.get_lockfile()
     let old_record = s:MetaInfo.get_record_by_name(plug_name, vim_lockfile)
     if empty(old_record)
         " If the record is not found, record the plugin info.
-        let dir = s:FS.join(s:FS.basename(a:vimbundle_dir), plug_name)
+        let dir = s:FS.join(s:FS.basename(vimbundle_dir), plug_name)
         let ver = (a:0 ? a:1 :
         \           s:FS.git({'work_tree': a:plug_dir,
         \                     'args': ['rev-parse', 'HEAD']}))
@@ -500,7 +500,7 @@ function! s:MetaInfo_update_record(url, vimbundle_dir, plug_dir, init, ...) abor
     elseif a:init
         " Bump version.
         call s:MetaInfo.do_unrecord_by_name(plug_name, vim_lockfile)
-        let dir = s:FS.join(s:FS.basename(a:vimbundle_dir), plug_name)
+        let dir = s:FS.join(s:FS.basename(vimbundle_dir), plug_name)
         let ver = s:FS.git({'work_tree': a:plug_dir,
         \                   'args': ['rev-parse', 'HEAD']})
         let record = s:MetaInfo.make_record(
