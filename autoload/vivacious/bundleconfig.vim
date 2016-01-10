@@ -99,7 +99,7 @@ function! s:do_source(bcconf)
     let s:loading_bundleconfig = a:bcconf
     try
         execute 'runtime! bundleconfig/' . a:bcconf.name . '/**/*.vim'
-        execute 'runtime! bundleconfig/' . a:bcconf.name . '*.vim'
+        execute 'runtime! bundleconfig/' . a:bcconf.name . '.vim'
 
         if has_key(a:bcconf.user, 'enable_if')
             let a:bcconf.disabled = !a:bcconf.user.enable_if()
