@@ -70,7 +70,7 @@ function! vivacious#bundleconfig#edit_bundleconfig(name, ...)
     endif
 endfunction
 
-function! vivacious#bundleconfig#complete_edit_bundleconfig(arglead, _l, _p)
+function! vivacious#bundleconfig#complete_edit_bundleconfig(arglead, ...)
     let dirs = glob('$MYVIMDIR/bundleconfig/*', 1, 1)
     call map(dirs, 'substitute(v:val, ".*[/\\\\]", "", "")')
     if a:arglead !=# ''

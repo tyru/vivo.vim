@@ -38,7 +38,7 @@ function! vivacious#remove(...) abort
     \       'remove', a:000, 'cmd_remove_help')
 endfunction
 
-function! vivacious#__complete_plug_name__(arglead, cmdline, cursorpos) abort
+function! vivacious#__complete_plug_name__(arglead, cmdline, ...) abort
     if a:cmdline !~# '^[A-Z]\w*\s\+.\+$'    " no args
         return map(s:MetaInfo.get_records_from_file(
         \           s:MetaInfo.get_lockfile()), 'v:val.name')
@@ -259,8 +259,6 @@ function! s:Vivacious_uninstall_plugin(plug_name, keep_record, redraw, metafile)
     let has_bundleconfig = filereadable(bundleconfig)
     " Remove the plugin info.
     if has_record && !a:keep_record
-        let ver = s:FS.git({'work_tree': plug_dir,
-        \                   'args': ['rev-parse', 'HEAD']})
         call s:MetaInfo.do_unrecord_by_name(a:plug_name, a:metafile)
         if !exists_dir && !has_bundleconfig && a:redraw
             redraw    " before the last message
@@ -314,7 +312,7 @@ function! s:Vivacious_cmd_purge_help() abort dict
 endfunction
 call s:method('Vivacious', 'cmd_purge_help')
 
-function! s:Vivacious_list(args) abort dict
+function! s:Vivacious_list(...) abort dict
     let vimbundle_dir = s:FS.vimbundle_dir()
     let records = s:MetaInfo.get_records_from_file(s:MetaInfo.get_lockfile())
     if empty(records)
@@ -413,7 +411,7 @@ function! s:Vivacious_cmd_fetch_all_help() abort dict
 endfunction
 call s:method('Vivacious', 'cmd_fetch_all_help')
 
-function! s:Vivacious_update(args) abort dict
+function! s:Vivacious_update(...) abort dict
     " Pre-check and build git update commands.
     let update_cmd_list = []
     for record in s:MetaInfo.get_records_from_file(s:MetaInfo.get_lockfile())
