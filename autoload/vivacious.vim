@@ -664,7 +664,13 @@ function! s:MetaInfo_update_record(url, plug_dir, update_existing, ...) abort di
 endfunction
 call s:method('MetaInfo', 'update_record')
 
+" * 'skk.vim' doesn't match 'eskk.vim'
+" * If 'skk.vim' is not installed, return empty list.
 function! s:MetaInfo_expand_plug_name(wildcard, metafile) abort dict
+    if a:wildcard !~# '[*?]'
+        let records = s:MetaInfo.get_records_from_file(a:metafile)
+        return map(filter(records, 'v:val.name ==# a:wildcard'), 'v:val.name')
+    endif
     let records = s:MetaInfo.get_records_from_file(a:metafile)
     let candidates = map(records, 'v:val.name')
     " wildcard -> regexp
