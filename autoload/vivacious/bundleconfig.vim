@@ -3,6 +3,9 @@ let s:save_cpo = &cpo
 set cpo&vim
 
 
+let g:vivacious#bundleconfig#open_cmd =
+\       get(g:, 'vivacious#bundleconfig#open_cmd', 'vsplit')
+
 " Load dependencies.
 let s:Msg = vivacious#get_msg()
 let s:FS = vivacious#get_filesystem()
@@ -52,7 +55,7 @@ function! vivacious#bundleconfig#edit_bundleconfig(name, ...)
     let filename = expand(
     \   '$MYVIMDIR/bundleconfig/' . a:name
     \   . (a:name !~? '\.vim$' ? '.vim' : ''))
-    drop `=filename`
+    execute g:vivacious#bundleconfig#open_cmd filename
     " If a buffer is empty, load template content.
     if line('$') ==# 1 && getline(1) ==# ''
         let template = s:FS.globpath(
