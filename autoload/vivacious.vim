@@ -122,7 +122,7 @@ let s:is_windows = has('win16') || has('win32')
 let s:is_unix = has('unix')
 let s:NONE = []
 let s:GIT_URL_RE  = '^\%(https\?\|git\)://'
-let s:GIT_URL_RE_PLUG_NAME = '[^/]\+\%(\.git\)\?/\?$'
+let s:GIT_URL_RE_PLUG_NAME = '\([^/]\+\)\%(\.git\)\?/\?$'
 let s:HTTP_URL_RE = '^https\?://'
 
 
@@ -182,7 +182,10 @@ call s:method('Vivacious', 'install')
 
 function! s:Vivacious_install_and_record(url, redraw, vimbundle_dir) abort dict
     call s:FS.install_git_plugin(a:url, a:redraw, a:vimbundle_dir)
-    let plug_name = matchstr(a:url, s:GIT_URL_RE_PLUG_NAME)
+    let plug_name = get(matchlist(a:url, s:GIT_URL_RE_PLUG_NAME), 1, '')
+    if plug_name ==# ''
+        throw 'vivacious: Invalid URL(' . a:url . ')'
+    endif
     let plug_dir = s:FS.join(a:vimbundle_dir, plug_name)
     let record = s:MetaInfo.update_record(a:url, plug_dir, 1)
     call s:FS.lock_version(record, plug_name, plug_dir)
@@ -781,7 +784,7 @@ function! vivacious#get_filesystem() abort
 endfunction
 
 function! s:FS_install_git_plugin(url, redraw, vimbundle_dir) abort dict
-    let plug_name = matchstr(a:url, s:GIT_URL_RE_PLUG_NAME)
+    let plug_name = get(matchlist(a:url, s:GIT_URL_RE_PLUG_NAME), 1, '')
     if plug_name ==# ''
         throw 'vivacious: Invalid URL(' . a:url . ')'
     endif
