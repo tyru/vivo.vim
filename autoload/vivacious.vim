@@ -3,6 +3,15 @@ let s:save_cpo = &cpo
 set cpo&vim
 
 
+" autoload/vivacious.vim must be runnable without other files
+" in vivacious repository.
+if !executable('git')
+    echohl ErrorMsg
+    echomsg "vivacious: 'git' is not installed in your PATH."
+    echohl None
+    finish
+endif
+
 let g:vivacious#debug = get(g:, 'vivacious#debug', 0)
 
 
