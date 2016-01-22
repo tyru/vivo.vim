@@ -24,7 +24,8 @@ function! vivacious#load_plugins(...)
         if isdirectory(plug_dir) && record.active
             " Keep runtimepath short as possible.
             let path = fnamemodify(plug_dir, ':~')
-            let &rtp = join([&rtp, path], ',')
+            " Prepend
+            let &rtp = join([path, &rtp], ',')
         endif
     endfor
 endfunction

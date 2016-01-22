@@ -12,6 +12,7 @@ if !executable('git')
     echohl ErrorMsg
     echomsg "vivacious: 'git' is not installed in your PATH."
     echohl None
+    finish
 endif
 
 command! -bar -nargs=+
