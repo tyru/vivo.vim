@@ -192,9 +192,6 @@ call s:method('Vivacious', 'install')
 function! s:Vivacious_install_and_record(url, redraw, vimbundle_dir) abort dict
     call s:FS.install_git_plugin(a:url, a:redraw, a:vimbundle_dir)
     let plug_name = get(matchlist(a:url, s:GIT_URL_RE_PLUG_NAME), 1, '')
-    if plug_name ==# ''
-        throw 'vivacious: Invalid URL(' . a:url . ')'
-    endif
     let plug_dir = s:FS.join(a:vimbundle_dir, plug_name)
     let record = s:MetaInfo.update_record(a:url, plug_dir, 1)
     call s:FS.lock_version(record, plug_name, plug_dir)
@@ -810,6 +807,7 @@ function! s:FS_install_git_plugin(url, redraw, vimbundle_dir) abort dict
         \   . "Please uninstall it by "
         \   . ":VivaciousRemove or :VivaciousPurge."
     endif
+
     " Fetch & Install
     call s:Msg.info_nohist(printf("Fetching a plugin from '%s'...", a:url))
     call s:FS.git('clone', a:url, plug_dir)
@@ -817,7 +815,14 @@ function! s:FS_install_git_plugin(url, redraw, vimbundle_dir) abort dict
         throw printf("vivacious: 'git clone %s %s' failed.", a:url, plug_dir)
     endif
     call s:Msg.info(printf("Fetching a plugin from '%s'... Done.", a:url))
+    " :source
     call s:FS.source_plugin(plug_dir)
+    " :helptags
+    let doc_dir = s:FS.join(plug_dir, 'doc')
+    if filewritable(doc_dir)
+        helptags `=doc_dir`
+    endif
+
     if a:redraw
         redraw    " before the last message
     endif
