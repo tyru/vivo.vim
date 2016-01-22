@@ -29,6 +29,12 @@ function! vivacious#load_plugins(...)
     endfor
 endfunction
 
+function! vivacious#loaded_plugin(name) abort
+    let lockfile = s:MetaInfo.get_lockfile()
+    let record = s:MetaInfo.get_record_by_name(a:name, lockfile)
+    return !empty(record) && record.active
+endfunction
+
 function! vivacious#helptags(...)
     for dir in s:FS.globpath(&rtp, 'doc')
         if filewritable(dir)    " Get rid of $VIMRUNTIME, and so on.
