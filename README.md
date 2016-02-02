@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/tyru/vivo.vim.svg?branch=master)](https://travis-ci.org/tyru/vivo.vim)
+[![Build Status](https://travis-ci.org/tyru/vivacious.vim.svg?branch=master)](https://travis-ci.org/tyru/vivacious.vim)
 
 # What's this?
 
