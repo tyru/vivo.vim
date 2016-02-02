@@ -3,21 +3,21 @@ let s:save_cpo = &cpo
 set cpo&vim
 
 
-" autoload/vivacious.vim must be runnable without other files
-" in vivacious repository.
+" autoload/vivo.vim must be runnable without other files
+" in vivo repository.
 if !executable('git')
     echohl ErrorMsg
-    echomsg "vivacious: 'git' is not installed in your PATH."
+    echomsg "vivo: 'git' is not installed in your PATH."
     echohl None
     finish
 endif
 
-let g:vivacious#debug = get(g:, 'vivacious#debug', 0)
+let g:vivo#debug = get(g:, 'vivo#debug', 0)
 
 
 let s:LOCKFILE_VERSION = 1
 
-function! vivacious#load_plugins(...)
+function! vivo#load_plugins(...)
     let lockfile = s:MetaInfo.get_lockfile()
     for record in s:MetaInfo.get_records_from_file(lockfile)
         let plug_dir = s:FS.abspath_record_dir(record.dir)
@@ -30,13 +30,13 @@ function! vivacious#load_plugins(...)
     endfor
 endfunction
 
-function! vivacious#loaded_plugin(name) abort
+function! vivo#loaded_plugin(name) abort
     let lockfile = s:MetaInfo.get_lockfile()
     let record = s:MetaInfo.get_record_by_name(a:name, lockfile)
     return !empty(record) && record.active
 endfunction
 
-function! vivacious#helptags(...)
+function! vivo#helptags(...)
     for dir in s:FS.globpath(&rtp, 'doc')
         if filewritable(dir)    " Get rid of $VIMRUNTIME, and so on.
             helptags `=dir`
@@ -44,17 +44,17 @@ function! vivacious#helptags(...)
     endfor
 endfunction
 
-function! vivacious#install(...)
-    call s:Vivacious.call_with_error_handlers(
+function! vivo#install(...)
+    call s:Vivo.call_with_error_handlers(
     \       'install', a:000, 'cmd_install_help')
 endfunction
 
-function! vivacious#remove(...) abort
-    call s:Vivacious.call_with_error_handlers(
+function! vivo#remove(...) abort
+    call s:Vivo.call_with_error_handlers(
     \       'remove', a:000, 'cmd_remove_help')
 endfunction
 
-function! vivacious#__complete_plug_name__(arglead, cmdline, ...) abort
+function! vivo#__complete_plug_name__(arglead, cmdline, ...) abort
     if a:cmdline !~# '^[A-Z]\w*\s\+.\+$'    " no args
         return map(s:MetaInfo.get_records_from_file(
         \           s:MetaInfo.get_lockfile()), 'v:val.name')
@@ -72,53 +72,53 @@ function! vivacious#__complete_plug_name__(arglead, cmdline, ...) abort
     endif
 endfunction
 
-function! vivacious#purge(...) abort
-    call s:Vivacious.call_with_error_handlers(
+function! vivo#purge(...) abort
+    call s:Vivo.call_with_error_handlers(
     \       'purge', a:000, 'cmd_purge_help')
 endfunction
 
-function! vivacious#list(...) abort
-    call s:Vivacious.call_with_error_handlers(
+function! vivo#list(...) abort
+    call s:Vivo.call_with_error_handlers(
     \       'list', a:000, 'cmd_list_help')
 endfunction
 
-function! vivacious#fetch_all(...) abort
-    call s:Vivacious.call_with_error_handlers(
+function! vivo#fetch_all(...) abort
+    call s:Vivo.call_with_error_handlers(
     \   'fetch_all', a:000, 'cmd_fetch_all_help')
 endfunction
 
-function! vivacious#update(...) abort
-    call s:Vivacious.call_with_error_handlers(
+function! vivo#update(...) abort
+    call s:Vivo.call_with_error_handlers(
     \   'update', a:000, 'cmd_update_help')
 endfunction
 
-function! vivacious#manage(...) abort
-    call s:Vivacious.call_with_error_handlers(
+function! vivo#manage(...) abort
+    call s:Vivo.call_with_error_handlers(
     \   'manage', a:000, 'cmd_manage_help')
 endfunction
 
-function! vivacious#enable(...) abort
-    call s:Vivacious.call_with_error_handlers(
+function! vivo#enable(...) abort
+    call s:Vivo.call_with_error_handlers(
     \   'enable', a:000, 'cmd_enable_help')
 endfunction
 
-function! vivacious#disable(...) abort
-    call s:Vivacious.call_with_error_handlers(
+function! vivo#disable(...) abort
+    call s:Vivo.call_with_error_handlers(
     \   'disable', a:000, 'cmd_disable_help')
 endfunction
 
 
-let s:Vivacious = {}
+let s:Vivo = {}
 let s:MetaInfo = {}
 let s:FS = {}
 let s:Msg = {}
-" For mock object testing
-function! vivacious#__inject__(name, obj) abort
-    if index(['Vivacious', 'MetaInfo', 'FS', 'Msg'],
+" TODO: for mock object testing
+function! vivo#__inject__(name, obj) abort
+    if index(['Vivo', 'MetaInfo', 'FS', 'Msg'],
     \   a:name) >=# 0
         let s:[a:name] = a:obj
     else
-        throw "vivacious: internal error: Cannot inject '" . a:name . "'."
+        throw "vivo: internal error: Cannot inject '" . a:name . "'."
     endif
 endfunction
 
@@ -142,25 +142,25 @@ let s:GIT_URL_RE_PLUG_NAME = '\([^/]\+\)\%(\.git\)\?/\?$'
 let s:HTTP_URL_RE = '^https\?://'
 
 
-" ===================== s:Vivacious =====================
+" ===================== s:Vivo =====================
 " Core functions
 
-function! vivacious#get_vivacious() abort
-    return s:Vivacious
+function! vivo#get_vivo() abort
+    return s:Vivo
 endfunction
 
-function! s:Vivacious_call_with_error_handlers(mainfunc, args, helpfunc) abort dict
+function! s:Vivo_call_with_error_handlers(mainfunc, args, helpfunc) abort dict
     try
         call self[a:mainfunc](a:args)
-    catch /^vivacious:\s*fatal:/
-        let e = substitute(v:exception, '^vivacious:\s*fatal:\s*', '', '')
+    catch /^vivo:\s*fatal:/
+        let e = substitute(v:exception, '^vivo:\s*fatal:\s*', '', '')
         call s:Msg.error('Fatal error. '
         \              . 'Please report this to '
-        \              . 'https://github.com/tyru/vivacious.vim/issues/new !')
+        \              . 'https://github.com/tyru/vivo.vim/issues/new !')
         call s:Msg.error('Error: ' . e . ' at ' . v:throwpoint)
         call self[a:helpfunc]()
-    catch /^vivacious:/
-        let e = substitute(v:exception, '^vivacious:\s*', '', '')
+    catch /^vivo:/
+        let e = substitute(v:exception, '^vivo:\s*', '', '')
         for line in split(e, '\n')
             call s:Msg.error(line)
         endfor
@@ -168,76 +168,76 @@ function! s:Vivacious_call_with_error_handlers(mainfunc, args, helpfunc) abort d
     catch
         call s:Msg.error('Internal error. '
         \              . 'Please report this to '
-        \              . 'https://github.com/tyru/vivacious.vim/issues/new !')
+        \              . 'https://github.com/tyru/vivo.vim/issues/new !')
         call s:Msg.error('Error: ' . v:exception . ' at ' . v:throwpoint)
         call self[a:helpfunc]()
     endtry
 endfunction
-call s:method('Vivacious', 'call_with_error_handlers')
+call s:method('Vivo', 'call_with_error_handlers')
 
-function! s:Vivacious_install(args) abort dict
+function! s:Vivo_install(args) abort dict
     if len(a:args) ==# 0 || a:args[0] =~# '^\%(-h\|--help\)$'
         return self.cmd_install_help()
     endif
     if len(a:args) !=# 1
-        throw 'vivacious: VivaciousInstall: too few or too many arguments.'
+        throw 'vivo: VivoInstall: too few or too many arguments.'
     endif
     if a:args[0] =~# '^[^/]\+/[^/]\+$'
-        " 'tyru/vivacious.vim'
+        " 'tyru/vivo.vim'
         let url = 'https://github.com/' . a:args[0]
-        call s:Vivacious.install_and_record(url, 1, s:FS.vimbundle_dir())
+        call s:Vivo.install_and_record(url, 1, s:FS.vimbundle_dir())
     elseif a:args[0] =~# s:GIT_URL_RE
-        " 'https://github.com/tyru/vivacious.vim'
+        " 'https://github.com/tyru/vivo.vim'
         let url = a:args[0]
-        call s:Vivacious.install_and_record(url, 1, s:FS.vimbundle_dir())
+        call s:Vivo.install_and_record(url, 1, s:FS.vimbundle_dir())
     else
-        throw 'vivacious: VivaciousInstall: invalid arguments.'
+        throw 'vivo: VivoInstall: invalid arguments.'
     endif
 endfunction
-call s:method('Vivacious', 'install')
+call s:method('Vivo', 'install')
 
-function! s:Vivacious_install_and_record(url, redraw, vimbundle_dir) abort dict
+function! s:Vivo_install_and_record(url, redraw, vimbundle_dir) abort dict
     call s:FS.install_git_plugin(a:url, a:redraw, a:vimbundle_dir)
     let plug_name = get(matchlist(a:url, s:GIT_URL_RE_PLUG_NAME), 1, '')
     let plug_dir = s:FS.join(a:vimbundle_dir, plug_name)
     let record = s:MetaInfo.update_record(a:url, plug_dir, 1)
     call s:FS.lock_version(record, plug_name, plug_dir)
 endfunction
-call s:method('Vivacious', 'install_and_record')
+call s:method('Vivo', 'install_and_record')
 
-function! s:Vivacious_cmd_install_help() abort dict
+function! s:Vivo_cmd_install_help() abort dict
     echo ' '
-    echo 'Usage: VivaciousInstall <source>'
-    echo '       VivaciousInstall tyru/vivacious.vim'
-    echo '       VivaciousInstall https://github.com/tyru/vivacious.vim'
+    echo 'Usage: VivoInstall <source>'
+    echo '       VivoInstall tyru/vivo.vim'
+    echo '       VivoInstall https://github.com/tyru/vivo.vim'
 endfunction
-call s:method('Vivacious', 'cmd_install_help')
+call s:method('Vivo', 'cmd_install_help')
 
-function! s:Vivacious_remove(args) abort dict
+function! s:Vivo_remove(args) abort dict
     if len(a:args) ==# 0 || a:args[0] =~# '^\%(-h\|--help\)$'
         return self.cmd_remove_help()
     endif
     if len(a:args) !=# 1 || a:args[0] !~# '^[^/\\]\+$'
-        throw 'vivacious: VivaciousRemove: invalid argument.'
+        throw 'vivo: VivoRemove: invalid argument.'
     endif
-    call s:Vivacious.uninstall_plugin_wildcard(
+    call s:Vivo.uninstall_plugin_wildcard(
     \       a:args[0], 1, s:MetaInfo.get_lockfile())
 endfunction
-call s:method('Vivacious', 'remove')
+call s:method('Vivo', 'remove')
 
-function! s:Vivacious_purge(args) abort dict
+function! s:Vivo_purge(args) abort dict
     if len(a:args) ==# 0 || a:args[0] =~# '^\%(-h\|--help\)$'
         return self.cmd_purge_help()
     endif
     if len(a:args) !=# 1 || a:args[0] !~# '^[^/\\]\+$'
-        throw 'vivacious: VivaciousPurge: invalid argument.'
+        throw 'vivo: VivoPurge: invalid argument.'
     endif
-    call s:Vivacious.uninstall_plugin_wildcard(
+    call s:Vivo.uninstall_plugin_wildcard(
     \           a:args[0], 0, s:MetaInfo.get_lockfile())
 endfunction
-call s:method('Vivacious', 'purge')
+call s:method('Vivo', 'purge')
 
-function! s:Vivacious_uninstall_plugin_wildcard(wildcard, keep_record, metafile) abort dict
+function! s:Vivo_uninstall_plugin_wildcard(wildcard, keep_record, metafile) abort dict
     let plug_name_list = s:MetaInfo.expand_plug_name(a:wildcard, a:metafile)
     if empty(plug_name_list)
         echo 'No matching plugins.'
@@ -253,19 +253,19 @@ function! s:Vivacious_uninstall_plugin_wildcard(wildcard, keep_record, metafile)
     echon "\n"
     " Uninstall all.
     for plug_name in plug_name_list
-        call s:Vivacious.uninstall_plugin(
+        call s:Vivo.uninstall_plugin(
         \       plug_name, a:keep_record, redraw, a:metafile)
     endfor
 endfunction
-call s:method('Vivacious', 'uninstall_plugin_wildcard')
+call s:method('Vivo', 'uninstall_plugin_wildcard')
 
-function! s:Vivacious_uninstall_plugin(plug_name, keep_record, redraw, metafile) abort dict
+function! s:Vivo_uninstall_plugin(plug_name, keep_record, redraw, metafile) abort dict
     let vimbundle_dir = s:FS.vimbundle_dir()
     let plug_dir = s:FS.join(vimbundle_dir, a:plug_name)
     let exists_dir = isdirectory(plug_dir)
     let has_record = s:MetaInfo.has_record_name_of(a:plug_name, a:metafile)
     if !exists_dir && !has_record
-        throw "vivacious: '" . a:plug_name . "' is not installed."
+        throw "vivo: '" . a:plug_name . "' is not installed."
     endif
     let bundleconfig = s:FS.join(s:FS.vimbundleconfig_dir(),
     \                            a:plug_name . '.vim')
@@ -300,32 +300,32 @@ function! s:Vivacious_uninstall_plugin(plug_name, keep_record, redraw, metafile)
         \       "Deleting the bundleconfig file of '%s'... Done.", a:plug_name))
     endif
 endfunction
-call s:method('Vivacious', 'uninstall_plugin')
+call s:method('Vivo', 'uninstall_plugin')
 
-function! s:Vivacious_cmd_remove_help() abort dict
+function! s:Vivo_cmd_remove_help() abort dict
     echo ' '
-    echo 'Usage: VivaciousRemove <plugin name in bundle dir>'
-    echo '       VivaciousRemove vivacious.vim'
-    echo '       VivaciousRemove *'
+    echo 'Usage: VivoRemove <plugin name in bundle dir>'
+    echo '       VivoRemove vivo.vim'
+    echo '       VivoRemove *'
     echo ' '
-    echo ':VivaciousRemove removes only a plugin directory.'
+    echo ':VivoRemove removes only a plugin directory.'
     echo 'It keeps a plugin info.'
-    echo 'After this command is executed, :VivaciousFetchAll can fetch a plugin directory again.'
+    echo 'After this command is executed, :VivoFetchAll can fetch a plugin directory again.'
 endfunction
-call s:method('Vivacious', 'cmd_remove_help')
+call s:method('Vivo', 'cmd_remove_help')
 
-function! s:Vivacious_cmd_purge_help() abort dict
+function! s:Vivo_cmd_purge_help() abort dict
     echo ' '
-    echo 'Usage: VivaciousPurge <plugin name in bundle dir>'
-    echo '       VivaciousPurge vivacious.vim'
-    echo '       VivaciousPurge *'
+    echo 'Usage: VivoPurge <plugin name in bundle dir>'
+    echo '       VivoPurge vivo.vim'
+    echo '       VivoPurge *'
     echo ' '
-    echo ':VivaciousPurge removes both a plugin directory and a plugin info.'
-    echo ':VivaciousFetchAll doesn''t help, all data about specified plugin are gone.'
+    echo ':VivoPurge removes both a plugin directory and a plugin info.'
+    echo ':VivoFetchAll doesn''t help, all data about specified plugin are gone.'
 endfunction
-call s:method('Vivacious', 'cmd_purge_help')
+call s:method('Vivo', 'cmd_purge_help')
 
-function! s:Vivacious_list(...) abort dict
+function! s:Vivo_list(...) abort dict
     let vimbundle_dir = s:FS.vimbundle_dir()
     let records = s:MetaInfo.get_records_from_file(s:MetaInfo.get_lockfile())
     if empty(records)
@@ -357,39 +357,39 @@ function! s:Vivacious_list(...) abort dict
     echomsg ' '
     echomsg 'Listed managed plugins.'
 endfunction
-call s:method('Vivacious', 'list')
+call s:method('Vivo', 'list')
 
-function! s:Vivacious_cmd_list_help() abort dict
+function! s:Vivo_cmd_list_help() abort dict
     echo ' '
-    echo 'Usage: VivaciousList'
+    echo 'Usage: VivoList'
     echo ' '
     echo 'Lists managed plugins including plugins which have been not fetched.'
 endfunction
-call s:method('Vivacious', 'cmd_list_help')
+call s:method('Vivo', 'cmd_list_help')
 
-function! s:Vivacious_fetch_all(args) abort dict
+function! s:Vivo_fetch_all(args) abort dict
     if len(a:args) >= 1 && a:args[0] =~# '^\%(-h\|--help\)$'
         return self.cmd_fetch_all_help()
     endif
     let metafile = (len(a:args) >= 1 ? expand(a:args[0]) : s:MetaInfo.get_lockfile())
     if metafile =~# s:HTTP_URL_RE
-        let content = s:Vivacious.http_get(metafile)
+        let content = s:Vivo.http_get(metafile)
         let metafile = tempname()
         call writefile(split(content, '\r\?\n', 1), metafile)
     endif
     try
-        call s:Vivacious.fetch_all_from_metafile(metafile)
+        call s:Vivo.fetch_all_from_metafile(metafile)
     finally
         if metafile =~# s:HTTP_URL_RE
             call delete(metafile)
         endif
     endtry
 endfunction
-call s:method('Vivacious', 'fetch_all')
+call s:method('Vivo', 'fetch_all')
 
-function! s:Vivacious_fetch_all_from_metafile(metafile) abort dict
+function! s:Vivo_fetch_all_from_metafile(metafile) abort dict
     if !filereadable(a:metafile)
-        throw "vivacious: Specified metafile doesn't exist. "
+        throw "vivo: Specified metafile doesn't exist. "
         \   . '(' . a:metafile . ')'
     endif
     let vimbundle_dir = s:FS.vimbundle_dir()
@@ -405,26 +405,26 @@ function! s:Vivacious_fetch_all_from_metafile(metafile) abort dict
             call s:MetaInfo.update_record(
             \       record.url, plug_dir, 0, {'version': record.version})
             call s:FS.lock_version(record, plug_name, plug_dir)
-        catch /vivacious: You already installed/
+        catch /vivo: You already installed/
             call s:Msg.info("You already installed '" . plug_name . "'.")
         endtry
     endfor
     let s:Msg.silent = has('vim_starting')
-    call s:Msg.info('VivaciousFetchAll: All plugins are installed!')
+    call s:Msg.info('VivoFetchAll: All plugins are installed!')
     let s:Msg.silent = 0
 endfunction
-call s:method('Vivacious', 'fetch_all_from_metafile')
+call s:method('Vivo', 'fetch_all_from_metafile')
 
-function! s:Vivacious_cmd_fetch_all_help() abort dict
+function! s:Vivo_cmd_fetch_all_help() abort dict
     echo ' '
-    echo 'Usage: VivaciousFetchAll [<Vivacious.lock>]'
-    echo '       VivaciousFetchAll /path/to/Vivacious.lock'
+    echo 'Usage: VivoFetchAll [<Vivo.lock>]'
+    echo '       VivoFetchAll /path/to/Vivo.lock'
     echo ' '
-    echo 'If no arguments are given, ~/.vim/Vivacious.lock is used.'
+    echo 'If no arguments are given, ~/.vim/Vivo.lock is used.'
 endfunction
-call s:method('Vivacious', 'cmd_fetch_all_help')
+call s:method('Vivo', 'cmd_fetch_all_help')
 
-function! s:Vivacious_update(...) abort dict
+function! s:Vivo_update(...) abort dict
     " Pre-check and build git update commands.
     let update_cmd_list = []
     for record in s:MetaInfo.get_records_from_file(s:MetaInfo.get_lockfile())
@@ -444,10 +444,10 @@ function! s:Vivacious_update(...) abort dict
         else
             " If the branch does not have a upstream, shows an error.
             call add(update_cmd_list,
-            \   {'msg': printf("vivacious: couldn't find a way to "
+            \   {'msg': printf("vivo: couldn't find a way to "
             \                . "update plugin '%s'.", record.name),
             \    'highlight': 'WarningMsg'})
-            call s:Msg.debug(printf("vivacious: couldn't find a way to "
+            call s:Msg.debug(printf("vivo: couldn't find a way to "
             \                . "update plugin '%s'.", record.name))
         endif
     endfor
@@ -477,23 +477,23 @@ function! s:Vivacious_update(...) abort dict
     call s:Msg.info(' ')
     call s:Msg.info('Updated all plugins!')
 endfunction
-call s:method('Vivacious', 'update')
+call s:method('Vivo', 'update')
 
-function! s:Vivacious_cmd_update_help() abort dict
+function! s:Vivo_cmd_update_help() abort dict
     echo ' '
-    echo 'Usage: VivaciousUpdate'
+    echo 'Usage: VivoUpdate'
     echo ' '
     echo 'Updates all installed plugins.'
 endfunction
-call s:method('Vivacious', 'cmd_update_help')
+call s:method('Vivo', 'cmd_update_help')
 
-function! s:Vivacious_manage(args) abort dict
+function! s:Vivo_manage(args) abort dict
     for plug_dir in s:FS.glob(a:args[0])
         " Supported only Git repository.
         if getftype(s:FS.join(plug_dir, '.git')) !=# ''
             let pullinfo = s:FS.get_pullinfo(plug_dir)
             if empty(pullinfo)
-                throw 'vivacious: Could not get upstream info '
+                throw 'vivo: Could not get upstream info '
                 \   . "from '" . plug_dir . "'."
             endif
             let remote_list = split(s:FS.git({
@@ -503,25 +503,25 @@ function! s:Vivacious_manage(args) abort dict
             let url = (idx >=# 0 ? get(matchlist(remote_list[idx], re), 1, '')
             \                    : '')
             if idx <# 0 || url ==# ''
-                throw 'vivacious: Could not get URL from upstream '
+                throw 'vivo: Could not get URL from upstream '
                 \   . '(' . pullinfo.remote . ').'
             endif
             call s:MetaInfo.update_record(url, plug_dir, 1)
         endif
     endfor
 endfunction
-call s:method('Vivacious', 'manage')
+call s:method('Vivo', 'manage')
 
-function! s:Vivacious_cmd_manage_help() abort dict
+function! s:Vivo_cmd_manage_help() abort dict
     echo ' '
-    echo 'Usage: VivaciousManage {wildcard filepath}'
-    echo '       VivaciousManage ~/.vim/bundle/*'
+    echo 'Usage: VivoManage {wildcard filepath}'
+    echo '       VivoManage ~/.vim/bundle/*'
     echo ' '
     echo 'Add existing installed plugins to lockfile.'
 endfunction
-call s:method('Vivacious', 'cmd_manage_help')
+call s:method('Vivo', 'cmd_manage_help')
 
-function! s:Vivacious_enable(args) abort
+function! s:Vivo_enable(args) abort
     let vim_lockfile = s:MetaInfo.get_lockfile()
     let wildcard = a:args[0]
     for plug_name in s:MetaInfo.expand_plug_name(wildcard, vim_lockfile)
@@ -546,19 +546,19 @@ function! s:Vivacious_enable(args) abort
         call s:Msg.info(printf("Enabled plugin '%s'.", plug_name))
     endfor
 endfunction
-call s:method('Vivacious', 'enable')
+call s:method('Vivo', 'enable')
 
-function! s:Vivacious_cmd_enable_help() abort dict
+function! s:Vivo_cmd_enable_help() abort dict
     echo ' '
-    echo 'Usage: VivaciousEnable <plugin name in bundle dir>'
-    echo '       VivaciousEnable vivacious.vim'
-    echo '       VivaciousEnable *'
+    echo 'Usage: VivoEnable <plugin name in bundle dir>'
+    echo '       VivoEnable vivo.vim'
+    echo '       VivoEnable *'
     echo ' '
     echo 'Enable managed plugins.'
 endfunction
-call s:method('Vivacious', 'cmd_enable_help')
+call s:method('Vivo', 'cmd_enable_help')
 
-function! s:Vivacious_disable(args) abort
+function! s:Vivo_disable(args) abort
     let vim_lockfile = s:MetaInfo.get_lockfile()
     let wildcard = a:args[0]
     for plug_name in s:MetaInfo.expand_plug_name(wildcard, vim_lockfile)
@@ -583,49 +583,49 @@ function! s:Vivacious_disable(args) abort
         call s:Msg.info(printf("Disabled plugin '%s'.", plug_name))
     endfor
 endfunction
-call s:method('Vivacious', 'disable')
+call s:method('Vivo', 'disable')
 
-function! s:Vivacious_cmd_disable_help() abort dict
+function! s:Vivo_cmd_disable_help() abort dict
     echo ' '
-    echo 'Usage: VivaciousDisable <plugin name in bundle dir>'
-    echo '       VivaciousDisable vivacious.vim'
-    echo '       VivaciousDisable *'
+    echo 'Usage: VivoDisable <plugin name in bundle dir>'
+    echo '       VivoDisable vivo.vim'
+    echo '       VivoDisable *'
     echo ' '
     echo 'Disable managed plugins.'
 endfunction
-call s:method('Vivacious', 'cmd_disable_help')
+call s:method('Vivo', 'cmd_disable_help')
 
-function! s:Vivacious_http_get(url) abort dict
+function! s:Vivo_http_get(url) abort dict
     if executable('curl')
         return system('curl -L -s -k ' . s:FS.shellescape(a:url))
     elseif executable('wget')
         return system('wget -q -L -O - ' . s:FS.shellescape(a:url))
     else
-        throw 'vivacious: s:Vivacious.http_get(): '
+        throw 'vivo: s:Vivo.http_get(): '
         \   . 'you doesn''t have curl nor wget.'
     endif
 endfunction
-call s:method('Vivacious', 'http_get')
+call s:method('Vivo', 'http_get')
 
 
 " ===================== s:MetaInfo =====================
 " Functions to manipulate metafile.
 " lockfile is one of metafile saved in `s:MetaInfo.get_lockfile()`.
 
-function! vivacious#get_metainfo() abort
+function! vivo#get_metainfo() abort
     return s:MetaInfo
 endfunction
 
 function! s:MetaInfo_get_lockfile() abort dict
-    return s:FS.join(s:FS.vim_dir(), 'Vivacious.lock')
+    return s:FS.join(s:FS.vim_dir(), 'Vivo.lock')
 endfunction
 call s:method('MetaInfo', 'get_lockfile')
 
 " @return updated record
 " @param update_existing (Boolean)
-"   non-zero (:VivaciousInstall)
+"   non-zero (:VivoInstall)
 "   * Update a record even if the plugin is already recorded.
-"   zero (:VivaciousFetchAll)
+"   zero (:VivoFetchAll)
 "   * Don't update a record.
 function! s:MetaInfo_update_record(url, plug_dir, update_existing, ...) abort dict
     let opt_record = (a:0 && type(a:1) ==# type({}) ? a:1 : {})
@@ -728,11 +728,11 @@ function! s:MetaInfo_readfile(metafile) abort dict
     let [ver; lines] = readfile(a:metafile)
     let result = s:MetaInfo.parse_ltsv(ver)
     if !has_key(result, 'version')
-        throw 'vivacious: fatal: s:MetaInfo.readfile(): '
-        \   . 'Vivacious.lock file is corrupted.'
+        throw 'vivo: fatal: s:MetaInfo.readfile(): '
+        \   . 'Vivo.lock file is corrupted.'
     endif
     if result.version > s:LOCKFILE_VERSION
-        throw 'vivacious: Too old vivacious.vim for parsing metafile. '
+        throw 'vivo: Too old vivo.vim for parsing metafile. '
         \   . 'Please update the plugin.'
     endif
     return filter(lines, '!empty(v:val)')
@@ -782,8 +782,8 @@ function! s:MetaInfo_parse_ltsv(line) abort dict
         endif
         let m = matchlist(keyval, re)
         if empty(m)
-            throw 'vivacious: fatal: s:MetaInfo.parse_ltsv(): '
-            \   . 'Vivacious.lock file is corrupted.'
+            throw 'vivo: fatal: s:MetaInfo.parse_ltsv(): '
+            \   . 'Vivo.lock file is corrupted.'
         endif
         let dict[m[1]] = m[2]
     endfor
@@ -796,30 +796,30 @@ call s:method('MetaInfo', 'parse_ltsv')
 " ===================== s:FS =====================
 " Functions about filesystem.
 
-function! vivacious#get_filesystem() abort
+function! vivo#get_filesystem() abort
     return s:FS
 endfunction
 
 function! s:FS_install_git_plugin(url, redraw, vimbundle_dir) abort dict
     let plug_name = get(matchlist(a:url, s:GIT_URL_RE_PLUG_NAME), 1, '')
     if plug_name ==# ''
-        throw 'vivacious: Invalid URL(' . a:url . ')'
+        throw 'vivo: Invalid URL(' . a:url . ')'
     endif
     if !isdirectory(a:vimbundle_dir)
         call s:FS.mkdir_p(a:vimbundle_dir)
     endif
     let plug_dir = s:FS.join(a:vimbundle_dir, plug_name)
     if isdirectory(plug_dir)
-        throw "vivacious: You already installed '" . plug_name . "'. "
+        throw "vivo: You already installed '" . plug_name . "'. "
         \   . "Please uninstall it by "
-        \   . ":VivaciousRemove or :VivaciousPurge."
+        \   . ":VivoRemove or :VivoPurge."
     endif
 
     " Fetch & Install
     call s:Msg.info_nohist(printf("Fetching a plugin from '%s'...", a:url))
     call s:FS.git('clone', a:url, plug_dir)
     if v:shell_error
-        throw printf("vivacious: 'git clone %s %s' failed.", a:url, plug_dir)
+        throw printf("vivo: 'git clone %s %s' failed.", a:url, plug_dir)
     endif
     call s:Msg.info(printf("Fetching a plugin from '%s'... Done.", a:url))
     " :source
@@ -841,7 +841,7 @@ function! s:FS_lock_version(record, plug_name, plug_dir) abort dict
     call s:FS.git({'work_tree': a:plug_dir,
     \              'args': ['checkout', a:record.version]})
     if v:shell_error
-        throw printf("vivacious: 'git checkout %s' failed.",
+        throw printf("vivo: 'git checkout %s' failed.",
         \                               a:record.version)
     endif
     call s:Msg.info(printf("Locked the version of '%s' (%s).",
@@ -851,7 +851,7 @@ call s:method('FS', 'lock_version')
 
 function! s:FS_delete_dir(dir) abort dict
     if !isdirectory(a:dir)
-        throw 'vivacious: fatal: s:FS.delete_dir(): '
+        throw 'vivo: fatal: s:FS.delete_dir(): '
         \   . 'given non-directory argument (' . a:dir . ').'
     endif
     call s:FS.delete_dir_impl(a:dir, 'rf')
@@ -891,7 +891,7 @@ elseif s:is_windows
   endfunction
 else
   function! s:FS_delete_dir_impl(...) abort dict
-      throw 'vivacious: fatal: s:FS.delete_dir_impl(): '
+      throw 'vivo: fatal: s:FS.delete_dir_impl(): '
       \   . 'your platform is not supported'
   endfunction
 endif
@@ -939,7 +939,7 @@ function! s:FS_git(...) abort dict
     endif
     if !executable('git')
         " This should be checked at earlier time!
-        throw "vivacious: fatal: 'git' is not installed in your PATH."
+        throw "vivo: fatal: 'git' is not installed in your PATH."
     endif
     let args = map(args, 's:FS.shellescape(v:val)')
     let out  = system(join(['git'] + args, ' '))
@@ -953,7 +953,7 @@ function! s:FS_git_current_branch(work_tree) abort dict
     let re = '^\* '
     call filter(lines, 'v:val =~# re')
     if empty(lines)
-        throw "vivacious: fatal: Could not find current branch "
+        throw "vivo: fatal: Could not find current branch "
         \   . "from 'git branch' output."
     endif
     return substitute(lines[0], re, '', '')
@@ -970,7 +970,7 @@ call s:method('FS', 'git_upstream_of')
 
 function! s:FS_get_pullinfo(plug_dir, ...) abort
     " If the branch is detached state,
-    " See branch when git clone and recorded in Vivacious.lock.
+    " See branch when git clone and recorded in Vivo.lock.
     let plug_name = s:FS.basename(a:plug_dir)
     let branch = s:FS.git_current_branch(a:plug_dir)
     if branch =~# '^([^)]\+)$'
@@ -980,7 +980,7 @@ function! s:FS_get_pullinfo(plug_dir, ...) abort
             let record = s:MetaInfo.get_record_by_name(
             \               plug_name, s:MetaInfo.get_lockfile())
             if empty(record)
-                throw "vivacious: fatal: s:FS.get_pullinfo(): "
+                throw "vivo: fatal: s:FS.get_pullinfo(): "
                 \   . "Could not find record for '" . plug_name . "'."
             endif
             let [remote, branch] = [record.remote, record.branch]
@@ -993,7 +993,7 @@ function! s:FS_get_pullinfo(plug_dir, ...) abort
     else
         let remote = s:FS.git_upstream_of(branch, a:plug_dir)
         if remote !~# '^\s*$'
-            if g:vivacious#debug
+            if g:vivo#debug
                 call s:Msg.debug(printf('%s: upstream is set (%s)',
                 \   plug_name, s:FS.git_upstream_of(branch, a:plug_dir)))
             endif
@@ -1012,14 +1012,14 @@ function! s:FS_vim_dir() abort dict
     elseif exists('$HOMEDRIVE') && exists('$HOMEPATH')
         let home = $HOMEDRIVE . $HOMEPATH
     else
-        throw 'vivacious: fatal: Could not find home directory.'
+        throw 'vivo: fatal: Could not find home directory.'
     endif
     if isdirectory(s:FS.join(home, '.vim'))
         return s:FS.join(home, '.vim')
     elseif isdirectory(s:FS.join(home, 'vimfiles'))
         return s:FS.join(home, 'vimfiles')
     else
-        throw 'vivacious: Could not find .vim directory.'
+        throw 'vivo: Could not find .vim directory.'
     endif
 endfunction
 call s:method('FS', 'vim_dir')
@@ -1069,7 +1069,7 @@ call s:method('FS', 'mkdir_p')
 " ===================== s:Msg =====================
 " Functions about messages.
 
-function! vivacious#get_msg() abort
+function! vivo#get_msg() abort
     return s:Msg
 endfunction
 
@@ -1080,10 +1080,10 @@ let s:Msg.silent = 0
 function! s:Msg_info_nohist(msg, ...) abort dict
     if s:Msg.silent | return | endif
     execute 'echohl' (a:0 ? a:1 : 'MoreMsg')
-    if g:vivacious#debug
-        echomsg 'vivacious:' a:msg
+    if g:vivo#debug
+        echomsg 'vivo:' a:msg
     else
-        echo 'vivacious:' a:msg
+        echo 'vivo:' a:msg
     endif
     echohl None
 endfunction
@@ -1093,7 +1093,7 @@ call s:method('Msg', 'info_nohist')
 function! s:Msg_info(msg, ...) abort dict
     if s:Msg.silent | return | endif
     execute 'echohl' (a:0 ? a:1 : 'MoreMsg')
-    echomsg 'vivacious:' a:msg
+    echomsg 'vivo:' a:msg
     echohl None
 endfunction
 call s:method('Msg', 'info')
@@ -1101,7 +1101,7 @@ call s:method('Msg', 'info')
 function! s:Msg_warn(msg, ...) abort dict
     if s:Msg.silent | return | endif
     execute 'echohl' (a:0 ? a:1 : 'WarningMsg')
-    echomsg 'vivacious:' a:msg
+    echomsg 'vivo:' a:msg
     echohl None
 endfunction
 call s:method('Msg', 'warn')
@@ -1109,16 +1109,16 @@ call s:method('Msg', 'warn')
 function! s:Msg_error(msg, ...) abort dict
     if s:Msg.silent | return | endif
     execute 'echohl' (a:0 ? a:1 : 'ErrorMsg')
-    echomsg 'vivacious:' a:msg
+    echomsg 'vivo:' a:msg
     echohl None
 endfunction
 call s:method('Msg', 'error')
 
 function! s:Msg_debug(msg, ...) abort dict
     if s:Msg.silent | return | endif
-    if !g:vivacious#debug | return | endif
+    if !g:vivo#debug | return | endif
     execute 'echohl' (a:0 ? a:1 : 'WarningMsg')
-    echomsg 'vivacious(DEBUG):' a:msg
+    echomsg 'vivo(DEBUG):' a:msg
     echohl None
 endfunction
 call s:method('Msg', 'debug')

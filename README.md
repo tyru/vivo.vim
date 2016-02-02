@@ -1,26 +1,26 @@
-[![Build Status](https://travis-ci.org/tyru/vivacious.vim.svg?branch=master)](https://travis-ci.org/tyru/vivacious.vim)
+[![Build Status](https://travis-ci.org/tyru/vivo.vim.svg?branch=master)](https://travis-ci.org/tyru/vivo.vim)
 
 # What's this?
 
-Yet yet yet another vim plugin manager.
+An yet yet yet another vim plugin manager.<br/>
 This plugin is designed for the following policies.
 
 1. Version locking is **MUST**.
-  * Managed plugins are listed in `~/.vim/Vivacious.lock`.
+  * Managed plugins are listed in `~/.vim/Vivo.lock`.
   * For completely restoring your current environment at another PC,
     you can manage the file by version control systems(aka Git, Mercurial, ...).
-    And just typing `:VivaciousFetchAll /path/to/Vivacious.lock` or `:call vivacious#fetch_all('/path/to/Vivacious.lock')`, everything is done like `bundle install`.
+    And just typing `:VivoFetchAll /path/to/Vivo.lock` or `:call vivo#fetch_all('/path/to/Vivo.lock')`, everything is done like `bundle install`.
 2. Of cource, Multi-platform is also **MUST**.
   * It works with: Windows, Linux
   * Maybe it works, but please tell me if it works: Mac OS X
 3. Install/Uninstall a plugin from command-line. Here are the examples.
   (See `Features` for details)
-  * `:VivaciousInstall tyru/open-browser.vim`
-  * `:VivaciousInstall https://github.com/tyru/open-browser.vim`
-  * `:VivaciousPurge open-browser.vim`
-  * `:VivaciousRemove open-browser.vim`
+  * `:VivoInstall tyru/open-browser.vim`
+  * `:VivoInstall https://github.com/tyru/open-browser.vim`
+  * `:VivoPurge open-browser.vim`
+  * `:VivoRemove open-browser.vim`
 4. I don't want to write plugins' names in .vimrc by hand!
-  * Okay, leave all stuffs about plugin management to vivacious.
+  * Okay, leave all stuffs about plugin management to vivo.
     You don't need to concern about them.
   * It shouldn't be there(.vimrc)!!!
 5. I don't want to write plugins' configurations in .vimrc, too!
@@ -35,24 +35,24 @@ This plugin is designed for the following policies.
 7. Stable, and Well-tested (TODO)
   * Plugin manager should be tested deeply and stable.
 8. Keep It Simple, Stupid
-  * Vivacious doesn't slow down your vim startup, and not support any features not in this policies.
+  * Vivo doesn't slow down your vim startup, and not support any features not in this policies.
 
 
 # How it works
 
 ```
-:VivaciousList
+:VivoList
 No plugins are installed.
 
-:VivaciousInstall tyru/caw.vim
-vivacious: Fetching a plugin from 'https://github.com/tyru/caw.vim'... Done.
-vivacious: Installed a plugin 'caw.vim'.
+:VivoInstall tyru/caw.vim
+vivo: Fetching a plugin from 'https://github.com/tyru/caw.vim'... Done.
+vivo: Installed a plugin 'caw.vim'.
 
-:VivaciousInstall tyru/open-browser.vim
-vivacious: Fetching a plugin from 'https://github.com/tyru/open-browser.vim'... Done.
-vivacious: Installed a plugin 'open-browser.vim'.
+:VivoInstall tyru/open-browser.vim
+vivo: Fetching a plugin from 'https://github.com/tyru/open-browser.vim'... Done.
+vivo: Installed a plugin 'open-browser.vim'.
 
-:VivaciousList
+:VivoList
 caw.vim
   Directory: /home/tyru/.vim/bundle/caw.vim
   Type: git
@@ -66,10 +66,10 @@ open-browser.vim
 
 Listed managed plugins.
 
-:VivaciousRemove open-browser.vim
-vivacious: Uninstalling the plugin 'open-browser.vim'... Done.
+:VivoRemove open-browser.vim
+vivo: Uninstalling the plugin 'open-browser.vim'... Done.
 
-:VivaciousList
+:VivoList
 caw.vim
   Directory: /home/tyru/.vim/bundle/caw.vim
   Type: git
@@ -83,12 +83,12 @@ open-browser.vim (not fetched)
 
 Listed managed plugins.
 
-:VivaciousPurge caw.vim
-vivacious: Unrecording the plugin info of 'caw.vim'... Done.
-vivacious: Uninstalling the plugin 'caw.vim'... Done.
+:VivoPurge caw.vim
+vivo: Unrecording the plugin info of 'caw.vim'... Done.
+vivo: Uninstalling the plugin 'caw.vim'... Done.
 
-:VivaciousList
-open-browser.vim (not fetched)                                                                                                                      
+:VivoList
+open-browser.vim (not fetched)
   Directory: /home/tyru/.vim/bundle/open-browser.vim
   Type: git
   URL: https://github.com/tyru/open-browser.vim
@@ -96,12 +96,12 @@ open-browser.vim (not fetched)
 
 Listed managed plugins.
 
-:VivaciousFetchAll
-vivacious: Fetching a plugin from 'https://github.com/tyru/open-browser.vim'... Done.
-vivacious: Installed a plugin 'open-browser.vim'.
-vivacious: VivaciousFetchAll: All plugins are installed!
+:VivoFetchAll
+vivo: Fetching a plugin from 'https://github.com/tyru/open-browser.vim'... Done.
+vivo: Installed a plugin 'open-browser.vim'.
+vivo: VivoFetchAll: All plugins are installed!
 
-:VivaciousList
+:VivoList
 open-browser.vim
   Directory: /home/tyru/.vim/bundle/open-browser.vim
   Type: git
@@ -113,27 +113,27 @@ Listed managed plugins.
 
 # Features
 
-## `:VivaciousInstall`
+## `:VivoInstall`
 
-* From GitHub repository: `:VivaciousInstall tyru/open-browser.vim`
-* From Git repository URL(http,https,git): `:VivaciousInstall https://github.com/tyru/open-browser.vim`
+* From GitHub repository: `:VivoInstall tyru/open-browser.vim`
+* From Git repository URL(http,https,git): `:VivoInstall https://github.com/tyru/open-browser.vim`
 
-## `:VivaciousPurge`
+## `:VivoPurge`
 
-* `:VivaciousPurge open-browser.vim` removes both a plugin directory and a plugin info.
+* `:VivoPurge open-browser.vim` removes both a plugin directory and a plugin info.
 
-## `:VivaciousRemove`
+## `:VivoRemove`
 
-* `:VivaciousRemove open-browser.vim` removes only a plugin directory.
-* After this command is executed, `:VivaciousFetchAll` can fetch a plugin directory again.
+* `:VivoRemove open-browser.vim` removes only a plugin directory.
+* After this command is executed, `:VivoFetchAll` can fetch a plugin directory again.
 
-## `:VivaciousList`
+## `:VivoList`
 
 * Lists managed plugins including which have been not fetched (See `How it works`).
 
-## `:VivaciousFetchAll`
+## `:VivoFetchAll`
 
-* Install all plugins recorded in `~/.vim/Vivacious.lock`.
+* Install all plugins recorded in `~/.vim/Vivo.lock`.
 * Also locks the versions to recorded commit.
   (for example, in git repository, it executes `git checkout {hash}`)
 
@@ -144,26 +144,26 @@ You must install this plugin by hand at first :)
 
 ## You have 'git' command
 
-1. `git clone https://github.com/tyru/vivacious.vim ~/.vim/bundle/vivacious.vim`
-2. Add `~/.vim/bundle/vivacious.vim` to runtimepath (See `Configuration`).
+1. `git clone https://github.com/tyru/vivo.vim ~/.vim/bundle/vivo.vim`
+2. Add `~/.vim/bundle/vivo.vim` to runtimepath (See `Configuration`).
 
 ## You don't have 'git' command
 
-1. Download ZIP archive from `https://github.com/tyru/vivacious.vim/archive/master.zip`.
-2. Create `~/.vim/bundle/vivacious.vim/` directory.
-3. Extract archive into `~/.vim/bundle/vivacious.vim/`.
+1. Download ZIP archive from `https://github.com/tyru/vivo.vim/archive/master.zip`.
+2. Create `~/.vim/bundle/vivo.vim/` directory.
+3. Extract archive into `~/.vim/bundle/vivo.vim/`.
 
 Here is the directory structure after step 3.
 
 ```
-$ tree ~/.vim/bundle/vivacious.vim/
-/home/tyru/.vim/bundle/vivacious.vim/
+$ tree ~/.vim/bundle/vivo.vim/
+/home/tyru/.vim/bundle/vivo.vim/
 ├── README.md
 ├── autoload
-│   └── vivacious.vim
+│   └── vivo.vim
 ├── doc
 └── plugin
-    └── vivacious.vim
+    └── vivo.vim
 ```
 
 
@@ -171,28 +171,28 @@ $ tree ~/.vim/bundle/vivacious.vim/
 
 ```viml
 if has('vim_starting')
-  set rtp+=~/.vim/bundle/vivacious.vim
-  " If you want to fetch vivacious.vim automatically...
-  " if !isdirectory(expand('~/.vim/bundle/vivacious.vim'))
+  set rtp+=~/.vim/bundle/vivo.vim
+  " If you want to fetch vivo.vim automatically...
+  " if !isdirectory(expand('~/.vim/bundle/vivo.vim'))
   "   call system('mkdir -p ~/.vim/bundle/')
-  "   call system('git clone https://github.com/tyru/vivacious.vim.git ~/.vim/bundle/vivacious.vim')
+  "   call system('git clone https://github.com/tyru/vivo.vim.git ~/.vim/bundle/vivo.vim')
   " end
 endif
 
 " Fetch managed plugins from remote.
-call vivacious#fetch_all()
+call vivo#fetch_all()
 
 " Add managed plugins to 'runtimepath'.
 " (It won't load disabled plugins)
-call vivacious#load_plugins()
+call vivo#load_plugins()
 filetype plugin indent on
 
 " Load all bundle configs in '~/.vim/bundleconfig/*.vim' (if you prefer).
 " This function loads plugin list from 'runtimepath'.
-call vivacious#bundleconfig#load()
+call vivo#bundleconfig#load()
 
 " Generate helptags for plugins in 'runtimepath'.
-call vivacious#helptags()
+call vivo#helptags()
 ```
 
 

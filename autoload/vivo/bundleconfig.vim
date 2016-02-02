@@ -3,22 +3,22 @@ let s:save_cpo = &cpo
 set cpo&vim
 
 
-let g:vivacious#bundleconfig#open_cmd =
-\       get(g:, 'vivacious#bundleconfig#open_cmd', 'vsplit')
+let g:vivo#bundleconfig#open_cmd =
+\       get(g:, 'vivo#bundleconfig#open_cmd', 'vsplit')
 
 " Load dependencies.
-let s:Msg = vivacious#get_msg()
-let s:FS = vivacious#get_filesystem()
+let s:Msg = vivo#get_msg()
+let s:FS = vivo#get_filesystem()
 
 
-" for vivacious#bundleconfig#new(),
+" for vivo#bundleconfig#new(),
 " s:bundleconfig and s:loading_bundleconfig cannot be local variables.
 let s:bundleconfig = {}
 let s:loading_bundleconfig = {}
 let s:loaded = 0
 
 
-function! vivacious#bundleconfig#load(...) abort
+function! vivo#bundleconfig#load(...) abort
     if s:loaded
         return
     endif
@@ -41,9 +41,9 @@ function! vivacious#bundleconfig#load(...) abort
     let s:loaded = 1
 endfunction
 
-function! vivacious#bundleconfig#new()
+function! vivo#bundleconfig#new()
     if empty(s:loading_bundleconfig)
-        call s:Msg.error("Please use vivacious#bundleconfig#new() in bundleconfig file!")
+        call s:Msg.error("Please use vivo#bundleconfig#new() in bundleconfig file!")
         return {}
     endif
     let name = s:loading_bundleconfig.name
@@ -51,11 +51,11 @@ function! vivacious#bundleconfig#new()
     return s:bundleconfig[name].user
 endfunction
 
-function! vivacious#bundleconfig#edit_bundleconfig(name, ...)
+function! vivo#bundleconfig#edit_bundleconfig(name, ...)
     let filename = expand(
     \   '$MYVIMDIR/bundleconfig/' . a:name
     \   . (a:name !~? '\.vim$' ? '.vim' : ''))
-    execute g:vivacious#bundleconfig#open_cmd filename
+    execute g:vivo#bundleconfig#open_cmd filename
     " If a buffer is empty, load template content.
     if line('$') ==# 1 && getline(1) ==# ''
         let template = s:FS.globpath(
@@ -70,7 +70,7 @@ function! vivacious#bundleconfig#edit_bundleconfig(name, ...)
     endif
 endfunction
 
-function! vivacious#bundleconfig#complete_edit_bundleconfig(arglead, ...)
+function! vivo#bundleconfig#complete_edit_bundleconfig(arglead, ...)
     let dirs = glob('$MYVIMDIR/bundleconfig/*', 1, 1)
     call map(dirs, 'substitute(v:val, ".*[/\\\\]", "", "")')
     if a:arglead !=# ''

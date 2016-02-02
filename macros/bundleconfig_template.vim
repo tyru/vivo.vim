@@ -3,7 +3,7 @@ let s:save_cpo = &cpo
 set cpo&vim
 
 
-let s:<PLUGVARNAME> = vivacious#bundleconfig#new()
+let s:<PLUGVARNAME> = vivo#bundleconfig#new()
 
 " Configuration for <PLUGNAME>.
 function! s:<PLUGVARNAME>.config()
@@ -15,7 +15,7 @@ function! s:<PLUGVARNAME>.depends()
 endfunction
 
 " Recommended plugin dependencies for <PLUGNAME>.
-" If the plugins are not installed, vivacious shows recommended plugins.
+" If the plugins are not installed, vivo shows recommended plugins.
 function! s:<PLUGVARNAME>.recommends()
     return []
 endfunction
@@ -27,7 +27,7 @@ function! s:<PLUGVARNAME>.depends_commands()
 endfunction
 
 " Recommended external commands dependencies for <PLUGNAME>.
-" If the plugins are not installed, vivacious shows recommended commands.
+" If the plugins are not installed, vivo shows recommended commands.
 function! s:<PLUGVARNAME>.recommends_commands()
     return []
 endfunction
