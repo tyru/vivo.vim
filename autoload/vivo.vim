@@ -137,8 +137,7 @@ let s:is_windows = has('win16') || has('win32')
 \               || has('win64') || has('win95')
 let s:is_unix = has('unix')
 let s:NONE = []
-let s:GIT_URL_RE  = '^\%(https\?\|git\)://'
-let s:GIT_URL_RE_PLUG_NAME = '\([^/]\+\)\%(\.git\)\?/\?$'
+let s:GIT_URL_RE_PLUG_NAME = '\([^/]\{-1,}\)\%(\.git\)\?/\?$'
 let s:HTTP_URL_RE = '^https\?://'
 
 
@@ -182,12 +181,18 @@ function! s:Vivo_install(args) abort dict
     if len(a:args) !=# 1
         throw 'vivo: VivoInstall: too few or too many arguments.'
     endif
-    if a:args[0] =~# '^[^/]\+/[^/]\+$'
+    if a:args[0] =~# '^[^:/]\+/[^/]\+$'
         " 'tyru/vivo.vim'
         let url = 'https://github.com/' . a:args[0]
         call s:Vivo.install_and_record(url, 1, s:FS.vimbundle_dir())
-    elseif a:args[0] =~# s:GIT_URL_RE
+    elseif a:args[0] =~# '^\%(https\?\|git\)://'
         " 'https://github.com/tyru/vivo.vim'
+        " 'git://github.com/tyru/vivo.vim'
+        let url = a:args[0]
+        call s:Vivo.install_and_record(url, 1, s:FS.vimbundle_dir())
+    elseif a:args[0] =~# '^\%(ssh://\)\?\w\+@[^:]\+'
+        " 'git@github.com:tyru/vivo.vim.git'
+        " 'ssh://git@github.com:tyru/vivo.vim.git'
         let url = a:args[0]
         call s:Vivo.install_and_record(url, 1, s:FS.vimbundle_dir())
     else
