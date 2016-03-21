@@ -3,22 +3,22 @@ let s:save_cpo = &cpo
 set cpo&vim
 
 
-let g:vivo#bundleconfig#open_cmd =
-\       get(g:, 'vivo#bundleconfig#open_cmd', 'vsplit')
+let g:vivo#plugconf#open_cmd =
+\       get(g:, 'vivo#plugconf#open_cmd', 'vsplit')
 
 " Load dependencies.
 let s:Msg = vivo#get_msg()
 let s:FS = vivo#get_filesystem()
 
 
-" for vivo#bundleconfig#new(),
-" s:bundleconfig and s:loading_bundleconfig cannot be local variables.
-let s:bundleconfig = {}
-let s:loading_bundleconfig = {}
+" for vivo#plugconf#new(),
+" s:plugconf and s:loading_plugconf cannot be local variables.
+let s:plugconf = {}
+let s:loading_plugconf = {}
 let s:loaded = 0
+let s:FS = vivo#get_fs()
 
-
-function! vivo#bundleconfig#load(...) abort
+function! vivo#plugconf#load(...) abort
     if s:loaded
         return
     endif
@@ -27,39 +27,41 @@ function! vivo#bundleconfig#load(...) abort
         if isdirectory(plug_dir)
             let name = s:get_no_suffix_name(plug_dir)
             if name !=# ''
-                let s:bundleconfig[name] = {
+                let s:plugconf[name] = {
                 \   "name": name, "path": plug_dir,
                 \   "done": 0, "disabled": 0, "user": {},
                 \}
             endif
         endif
     endfor
-    call s:load_all_bundleconfig()
+    call s:load_all_plugconf()
 
-    unlet s:bundleconfig
-    unlet s:loading_bundleconfig
+    unlet s:plugconf
+    unlet s:loading_plugconf
     let s:loaded = 1
 endfunction
 
-function! vivo#bundleconfig#new()
-    if empty(s:loading_bundleconfig)
-        call s:Msg.error("Please use vivo#bundleconfig#new() in bundleconfig file!")
+function! vivo#plugconf#new()
+    if empty(s:loading_plugconf)
+        call s:Msg.error("Please use vivo#plugconf#new() in plugconf file!")
         return {}
     endif
-    let name = s:loading_bundleconfig.name
-    let s:bundleconfig[name].user = deepcopy(s:BundleUserConfig)
-    return s:bundleconfig[name].user
+    let name = s:loading_plugconf.name
+    let s:plugconf[name].user = deepcopy(s:BundleUserConfig)
+    return s:plugconf[name].user
 endfunction
 
-function! vivo#bundleconfig#edit_bundleconfig(name, ...)
-    let filename = expand(
-    \   '$MYVIMDIR/bundleconfig/' . a:name
-    \   . (a:name !~? '\.vim$' ? '.vim' : ''))
-    execute g:vivo#bundleconfig#open_cmd filename
+function! vivo#plugconf#edit_plugconf(name, ...)
+    let filename = s:FS.join(
+    \   s:FS.plugconf_dir(),
+    \   a:name . (a:name !~? '\.vim$' ? '.vim' : '')
+    \)
+    execute g:vivo#plugconf#open_cmd filename
     " If a buffer is empty, load template content.
     if line('$') ==# 1 && getline(1) ==# ''
         let template = s:FS.globpath(
-        \                   &rtp, 'macros/bundleconfig_template.vim')[0]
+        \   &rtp, 'macros/plugconf_template.vim'
+        \)[0]
         silent read `=template`
         silent 1 delete _
         let plugname = fnamemodify(filename, ':t:r')
@@ -70,8 +72,8 @@ function! vivo#bundleconfig#edit_bundleconfig(name, ...)
     endif
 endfunction
 
-function! vivo#bundleconfig#complete_edit_bundleconfig(arglead, ...)
-    let dirs = glob('$MYVIMDIR/bundleconfig/*', 1, 1)
+function! vivo#plugconf#complete_edit_plugconf(arglead, ...)
+    let dirs = s:FS.glob(s:FS.plugconf_dir() . '/*')
     call map(dirs, 'substitute(v:val, ".*[/\\\\]", "", "")')
     if a:arglead !=# ''
         " wildcard -> regexp pattern
@@ -84,25 +86,25 @@ function! vivo#bundleconfig#complete_edit_bundleconfig(arglead, ...)
 endfunction
 
 
-function! s:load_all_bundleconfig()
-    for bcconf in values(s:bundleconfig)
+function! s:load_all_plugconf()
+    for bcconf in values(s:plugconf)
         call s:do_source(bcconf)
     endfor
     " Load in order?
-    for name in keys(s:bundleconfig)
-        let bcconf = s:bundleconfig[name]
+    for name in keys(s:plugconf)
+        let bcconf = s:plugconf[name]
         if bcconf.done
             continue
         endif
-        call s:load_bundleconfig(bcconf)
+        call s:load_plugconf(bcconf)
     endfor
 endfunction
 
 function! s:do_source(bcconf)
-    let s:loading_bundleconfig = a:bcconf
+    let s:loading_plugconf = a:bcconf
     try
-        execute 'runtime! bundleconfig/' . a:bcconf.name . '/**/*.vim'
-        execute 'runtime! bundleconfig/' . a:bcconf.name . '.vim'
+        execute 'runtime! vivo/plugconf/' . a:bcconf.name . '/**/*.vim'
+        execute 'runtime! vivo/plugconf/' . a:bcconf.name . '.vim'
 
         if has_key(a:bcconf.user, 'enable_if')
             let a:bcconf.disabled = !a:bcconf.user.enable_if()
@@ -115,7 +117,7 @@ function! s:do_source(bcconf)
             for cmd in type(commands) is type([]) ?
             \               commands : [commands]
                 if !executable(cmd)
-                    call s:Msg.error("[bundleconfig] " .
+                    call s:Msg.error("[plugconf] " .
                     \   "'" . a:bcconf.name . "' requires " .
                     \   "'" . cmd . "' command but not in your PATH!")
                     let a:bcconf.disabled = 1
@@ -133,11 +135,11 @@ function! s:do_source(bcconf)
         endfor
         call s:Msg.error('--- Sourcing ' . a:bcconf.path . ' ... ---')
     finally
-        let s:loading_bundleconfig = {}
+        let s:loading_plugconf = {}
     endtry
 endfunction
 
-function! s:load_bundleconfig(bcconf)
+function! s:load_plugconf(bcconf)
     if a:bcconf.disabled
         return 0
     endif
@@ -146,8 +148,8 @@ function! s:load_bundleconfig(bcconf)
             let depfail = []
             let depends = a:bcconf.user.depends()
             for depname in type(depends) is type([]) ? depends : [depends]
-                if !has_key(s:bundleconfig, depname) ||
-                \   !s:load_bundleconfig(s:bundleconfig[depname])
+                if !has_key(s:plugconf, depname) ||
+                \   !s:load_plugconf(s:plugconf[depname])
                     let depfail += [depname]
                 endif
             endfor
@@ -159,7 +161,7 @@ function! s:load_bundleconfig(bcconf)
             endif
         endif
         if has_key(a:bcconf.user, 'config')
-            let s:loading_bundleconfig = a:bcconf
+            let s:loading_plugconf = a:bcconf
             call a:bcconf.user.config()
         endif
     catch
@@ -173,7 +175,7 @@ function! s:load_bundleconfig(bcconf)
         call s:Msg.error('--- Loading ' . a:bcconf.path . ' ... ---')
         return 0
     finally
-        let s:loading_bundleconfig = {}
+        let s:loading_plugconf = {}
     endtry
     let a:bcconf.done = 1
     return 1
@@ -187,7 +189,7 @@ function! s:get_no_suffix_name(path)
 endfunction
 
 
-" See macros/bundleconfig_template.vim for each function.
+" See macros/plugconf_template.vim for each function.
 let s:BundleUserConfig = {}
 
 function! s:BundleUserConfig.config()
