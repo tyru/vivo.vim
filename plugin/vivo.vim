@@ -16,11 +16,12 @@ if !executable('git')
 endif
 
 command! -bar -nargs=+
-\   -complete=customlist,vivo#bundleconfig#complete_edit_bundleconfig
-\   VivoEditBundleConfig
-\   call vivo#bundleconfig#edit_bundleconfig(<f-args>)
+\   -complete=customlist,vivo#plugconf#complete_edit_plugconf
+\   VivoEditPlugConf
+\   call vivo#plugconf#edit_plugconf(<f-args>)
 
 command! -bar -nargs=*
+\   -complete=customlist,vivo#__complete_install__
 \   VivoInstall call vivo#install(<f-args>)
 command! -bar -nargs=*
 \   -complete=customlist,vivo#__complete_plug_name__

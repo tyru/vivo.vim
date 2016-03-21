@@ -17,17 +17,30 @@ let g:vivo#debug = get(g:, 'vivo#debug', 0)
 
 let s:LOCKFILE_VERSION = 1
 
-function! vivo#load_plugins(...)
+function! vivo#rtp_append_plugins()
     let lockfile = s:MetaInfo.get_lockfile()
     for record in s:MetaInfo.get_records_from_file(lockfile)
-        let plug_dir = s:FS.abspath_record_dir(record.dir)
-        if isdirectory(plug_dir) && record.active
-            " Keep runtimepath short as possible.
-            let path = fnamemodify(plug_dir, ':~')
-            " Prepend
-            let &rtp = join([path, &rtp], ',')
+        if !record.active
+            continue
         endif
+        let plug_dir = s:FS.abspath_record_dir(record.dir)
+        for dir in [plug_dir, s:FS.join(plug_dir, 'after')]
+            if isdirectory(dir)
+                " Keep runtimepath short as possible.
+                let path = fnamemodify(dir, ':~')
+                " Prepend
+                let &rtp = join([path, &rtp], ',')
+            endif
+        endfor
     endfor
+endfunction
+
+function! vivo#rtp_append_pack(...)
+    let pack_dir = a:0 && type(a:1) ==# type('') ? a:1 : s:FS.pack_dir()
+    " Keep runtimepath short as possible.
+    let pack_dir = fnamemodify(pack_dir, ':~')
+    " Prepend
+    let &rtp = join([pack_dir, &rtp], ',')
 endfunction
 
 function! vivo#loaded_plugin(name) abort
@@ -47,6 +60,13 @@ endfunction
 function! vivo#install(...)
     call s:Vivo.call_with_error_handlers(
     \       'install', a:000, 'cmd_install_help')
+endfunction
+
+function! vivo#__complete_install__(arglead, ...) abort
+    if a:arglead[0] ==# '-'
+        return ['--help', '--pack']
+    endif
+    return call('vivo#__complete_plug_name__', [a:arglead] + a:000)
 endfunction
 
 function! vivo#remove(...) abort
@@ -148,6 +168,10 @@ function! vivo#get_vivo() abort
     return s:Vivo
 endfunction
 
+function! vivo#get_fs() abort
+    return s:FS
+endfunction
+
 function! s:Vivo_call_with_error_handlers(mainfunc, args, helpfunc) abort dict
     try
         call self[a:mainfunc](a:args)
@@ -178,6 +202,9 @@ function! s:Vivo_install(args) abort dict
     if len(a:args) ==# 0 || a:args[0] =~# '^\%(-h\|--help\)$'
         return self.cmd_install_help()
     endif
+    if a:args[0] ==# '--pack'
+        return s:Vivo.copy_plugins_to_pack_dir_wildcard(a:args[1:])
+    endif
     if len(a:args) !=# 1
         throw 'vivo: VivoInstall: too few or too many arguments.'
     endif
@@ -200,6 +227,55 @@ function! s:Vivo_install(args) abort dict
     endif
 endfunction
 call s:method('Vivo', 'install')
+
+function! s:Vivo_copy_plugins_to_pack_dir_wildcard(args) abort dict
+    if len(a:args) ==# 0
+        throw 'vivo: VivoInstall: too few arguments.'
+    endif
+    let pack_dir = s:FS.pack_dir()
+    silent! call mkdir(pack_dir, 'p')
+    let vim_lockfile = s:MetaInfo.get_lockfile()
+    for arg in a:args
+        for plug_name in s:MetaInfo.expand_plug_name(arg, vim_lockfile)
+            call s:Msg.info_nohist(
+            \   "Copying '" . plug_name . "' files to pack directory..."
+            \)
+            call s:Vivo.copy_plugin_to_pack_dir(plug_name)
+            call s:Msg.info(
+            \   "Copying '" . plug_name . "' files to pack directory... Done."
+            \)
+        endfor
+    endfor
+endfunction
+call s:method('Vivo', 'copy_plugins_to_pack_dir_wildcard')
+
+function! s:Vivo_copy_plugin_to_pack_dir(plug_name) abort dict
+    let plug_dir = resolve(s:FS.join(s:FS.vimbundle_dir(), a:plug_name))
+    cd! `=plug_dir`
+    try
+        let pack_dir = s:FS.pack_dir()
+        let topdir_list = ['autoload', 'colors', 'compiler', 'ftplugin',
+        \                  'ftdetect', 'indent', 'keymap', 'plugin',
+        \                  'syntax', 'doc', 'lang', 'macros', 'spell']
+        for srcfile in s:FS.glob(plug_dir . '/**/*')
+            let relsrcfile = fnamemodify(srcfile, ':.')
+            let topdir = s:FS.split(relsrcfile)
+            let t1 = get(topdir, 0, '')
+            let t2 = get(topdir, 1, '')
+            if (index(topdir_list, t1) !=# -1 ||
+            \    t1 ==# 'after' &&
+            \    index(topdir_list, t2) !=# -1)
+                let destfile = s:FS.join(pack_dir, relsrcfile)
+                let destdir = s:FS.dirname(destfile)
+                silent! call mkdir(destdir, 'p')
+                call s:FS.copy(srcfile, destfile)
+            endif
+        endfor
+    finally
+        cd! -
+    endtry
+endfunction
+call s:method('Vivo', 'copy_plugin_to_pack_dir')
 
 function! s:Vivo_install_and_record(url, redraw, vimbundle_dir) abort dict
     call s:FS.install_git_plugin(a:url, a:redraw, a:vimbundle_dir)
@@ -272,13 +348,13 @@ function! s:Vivo_uninstall_plugin(plug_name, keep_record, redraw, metafile) abor
     if !exists_dir && !has_record
         throw "vivo: '" . a:plug_name . "' is not installed."
     endif
-    let bundleconfig = s:FS.join(s:FS.vimbundleconfig_dir(),
+    let plugconf = s:FS.join(s:FS.plugconf_dir(),
     \                            a:plug_name . '.vim')
-    let has_bundleconfig = filereadable(bundleconfig)
+    let has_plugconf = filereadable(plugconf)
     " Remove the plugin info.
     if has_record && !a:keep_record
         call s:MetaInfo.do_unrecord_by_name(a:plug_name, a:metafile)
-        if !exists_dir && !has_bundleconfig && a:redraw
+        if !exists_dir && !has_plugconf && a:redraw
             redraw    " before the last message
         endif
         call s:Msg.info(printf(
@@ -288,21 +364,21 @@ function! s:Vivo_uninstall_plugin(plug_name, keep_record, redraw, metafile) abor
     if exists_dir
         call s:Msg.info_nohist(printf("Deleting the plugin directory '%s'...", a:plug_name))
         call s:FS.delete_dir(plug_dir)
-        if !has_bundleconfig && a:redraw
+        if !has_plugconf && a:redraw
             redraw    " before the last message
         endif
         call s:Msg.info(printf(
         \       "Deleting the plugin directory '%s'... Done.", a:plug_name))
     endif
-    if has_bundleconfig
+    if has_plugconf
         call s:Msg.info_nohist(printf(
-        \       "Deleting the bundleconfig file of '%s'...", a:plug_name))
-        call delete(bundleconfig)
+        \       "Deleting the plugconf file of '%s'...", a:plug_name))
+        call delete(plugconf)
         if a:redraw
             redraw    " before the last message
         endif
         call s:Msg.info(printf(
-        \       "Deleting the bundleconfig file of '%s'... Done.", a:plug_name))
+        \       "Deleting the plugconf file of '%s'... Done.", a:plug_name))
     endif
 endfunction
 call s:method('Vivo', 'uninstall_plugin')
@@ -424,10 +500,10 @@ call s:method('Vivo', 'fetch_all_from_metafile')
 
 function! s:Vivo_cmd_fetch_all_help() abort dict
     echo ' '
-    echo 'Usage: VivoFetchAll [<Vivo.lock>]'
-    echo '       VivoFetchAll /path/to/Vivo.lock'
+    echo 'Usage: VivoFetchAll [<lockfile>]'
+    echo '       VivoFetchAll /path/to/lockfile'
     echo ' '
-    echo 'If no arguments are given, ~/.vim/Vivo.lock is used.'
+    echo 'If no arguments are given, ~/.vim/vivo/lock.ltsv is used.'
 endfunction
 call s:method('Vivo', 'cmd_fetch_all_help')
 
@@ -624,7 +700,7 @@ function! vivo#get_metainfo() abort
 endfunction
 
 function! s:MetaInfo_get_lockfile() abort dict
-    return s:FS.join(s:FS.vim_dir(), 'Vivo.lock')
+    return s:FS.join(s:FS.vivo_dir(), 'lock.ltsv')
 endfunction
 call s:method('MetaInfo', 'get_lockfile')
 
@@ -736,7 +812,7 @@ function! s:MetaInfo_readfile(metafile) abort dict
     let result = s:MetaInfo.parse_ltsv(ver)
     if !has_key(result, 'version')
         throw 'vivo: fatal: s:MetaInfo.readfile(): '
-        \   . 'Vivo.lock file is corrupted.'
+        \   . 'lockfile is corrupted.'
     endif
     if result.version > s:LOCKFILE_VERSION
         throw 'vivo: Too old vivo.vim for parsing metafile. '
@@ -790,7 +866,7 @@ function! s:MetaInfo_parse_ltsv(line) abort dict
         let m = matchlist(keyval, re)
         if empty(m)
             throw 'vivo: fatal: s:MetaInfo.parse_ltsv(): '
-            \   . 'Vivo.lock file is corrupted.'
+            \   . 'lockfile is corrupted.'
         endif
         let dict[m[1]] = m[2]
     endfor
@@ -904,21 +980,90 @@ else
 endif
 call s:method('FS', 'delete_dir_impl')
 
+" Copy a file. {{{
+" Dispatch s:copy_exe() or s:copy_vim().
+function! s:FS_copy(src, dest) abort dict
+  if s:_has_copy_exe()
+    return s:copy_exe(a:src, a:dest)
+  else
+    return s:copy_vim(a:src, a:dest)
+  endif
+endfunction
+
+if s:is_unix
+  function! s:_has_copy_exe() abort
+    return executable('cp')
+  endfunction
+elseif s:is_windows
+  function! s:_has_copy_exe() abort
+    return 1
+  endfunction
+else
+  function! s:_has_copy_exe() abort
+    throw 'vital: System.File: _has_copy_exe(): your platform is not supported'
+  endfunction
+endif
+
+" Copy a file.
+" Implemented by external program.
+if s:is_unix
+  function! s:copy_exe(src, dest) abort
+    if !s:_has_copy_exe() | return 0 | endif
+    let [src, dest] = [a:src, a:dest]
+    call system('cp ' . shellescape(src) . ' ' . shellescape(dest))
+    return !v:shell_error
+  endfunction
+elseif s:is_windows
+  function! s:copy_exe(src, dest) abort
+    if !s:_has_copy_exe() | return 0 | endif
+    let [src, dest] = [a:src, a:dest]
+    let src  = substitute(src, '/', '\', 'g')
+    let dest = substitute(dest, '/', '\', 'g')
+    let cmd_exe = (&shell =~? 'cmd\.exe$' ? '' : 'cmd /c ')
+    call system(cmd_exe . 'copy /y ' . src . ' ' . dest)
+    return !v:shell_error
+  endfunction
+else
+  function! s:copy_exe() abort
+    throw 'vital: System.File: copy_exe(): your platform is not supported'
+  endfunction
+endif
+
+" Copy a file.
+" Implemented by pure Vim script.
+function! s:copy_vim(src, dest) abort
+  let ret = writefile(readfile(a:src, 'b'), a:dest, 'b')
+  if ret == -1
+    return 0
+  endif
+  return 1
+endfunction
+
+" }}}
+call s:method('FS', 'copy')
+
 " Add to runtimepath.
 " And source 'plugin' directory.
 " TODO: Handle error?
 function! s:FS_source_plugin(plug_dir) abort dict
     let &rtp .= ',' . a:plug_dir
-    for file in s:FS.glob(s:FS.join(a:plug_dir, 'plugin', '**', '*.vim'))
+    for file in s:FS.glob(a:plug_dir . '/plugin/**/*.vim')
         source `=file`
     endfor
 endfunction
 call s:method('FS', 'source_plugin')
 
-" TODO: Support older vim
-function! s:FS_glob(expr) abort dict
+if v:version ># 703 ||
+\  (v:version is 703 && has('patch465'))
+  function! s:FS_glob(expr) abort dict
     return glob(a:expr, 1, 1)
-endfunction
+  endfunction
+else
+  function! s:FS_glob(expr) abort dict
+    let R = glob(a:expr, 1)
+    return split(R, '\n')
+  endfunction
+endif
 call s:method('FS', 'glob')
 
 " TODO: Support older vim
@@ -977,7 +1122,7 @@ call s:method('FS', 'git_upstream_of')
 
 function! s:FS_get_pullinfo(plug_dir, ...) abort
     " If the branch is detached state,
-    " See branch when git clone and recorded in Vivo.lock.
+    " See branch when git clone and recorded in lockfile.
     let plug_name = s:FS.basename(a:plug_dir)
     let branch = s:FS.git_current_branch(a:plug_dir)
     if branch =~# '^([^)]\+)$'
@@ -1036,10 +1181,20 @@ function! s:FS_vimbundle_dir() abort dict
 endfunction
 call s:method('FS', 'vimbundle_dir')
 
-function! s:FS_vimbundleconfig_dir() abort dict
-    return s:FS.join(s:FS.vim_dir(), 'bundle')
+function! s:FS_vivo_dir() abort dict
+    return s:FS.join(s:FS.vim_dir(), 'vivo')
 endfunction
-call s:method('FS', 'vimbundleconfig_dir')
+call s:method('FS', 'vivo_dir')
+
+function! s:FS_plugconf_dir() abort dict
+    return s:FS.join(s:FS.vivo_dir(), 'plugconf')
+endfunction
+call s:method('FS', 'plugconf_dir')
+
+function! s:FS_pack_dir() abort dict
+    return s:FS.join(s:FS.vivo_dir(), 'pack')
+endfunction
+call s:method('FS', 'pack_dir')
 
 let s:PATH_SEP = s:is_windows ? '\' : '/'
 function! s:FS_join(...) abort dict
@@ -1058,6 +1213,12 @@ function! s:FS_dirname(path) abort dict
     return fnamemodify(path, ':h')
 endfunction
 call s:method('FS', 'dirname')
+
+let s:PATH_SEP_PATTERN = s:is_windows ? '\\\+' : '/\+'
+function! s:FS_split(path) abort dict
+    return split(a:path, s:PATH_SEP_PATTERN)
+endfunction
+call s:method('FS', 'split')
 
 " If dir is relative path, concat to s:FS.vim_dir().
 function! s:FS_abspath_record_dir(dir) abort dict

@@ -3,7 +3,7 @@ let s:save_cpo = &cpo
 set cpo&vim
 
 
-let s:<PLUGVARNAME> = vivo#bundleconfig#new()
+let s:<PLUGVARNAME> = vivo#plugconf#new()
 
 " Configuration for <PLUGNAME>.
 function! s:<PLUGVARNAME>.config()
