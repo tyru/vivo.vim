@@ -234,7 +234,6 @@ function! s:Vivo_copy_plugins_to_pack_dir_wildcard(args) abort dict
     endif
     let pack_dir = s:FS.pack_dir()
     silent! call mkdir(pack_dir, 'p')
-    let vimbundle_dir = s:FS.vimbundle_dir()
     let vim_lockfile = s:MetaInfo.get_lockfile()
     for arg in a:args
         for plug_name in s:MetaInfo.expand_plug_name(arg, vim_lockfile)
