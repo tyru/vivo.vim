@@ -512,15 +512,17 @@ call s:method('Vivo', 'cmd_fetch_all_help')
 function! s:Vivo_update(args) abort dict
     if len(a:args) ==# 0
         let records = s:MetaInfo.get_records_from_file(s:MetaInfo.get_lockfile())
-    elseif len(a:args) ==# 1
-        let records = [s:MetaInfo.get_record_by_name(a:args[0], s:MetaInfo.get_lockfile())]
-        if empty(records[0])
-            call s:Msg.warn("'" . plug_name .
-            \               "' is not a managed plugin name.")
-            return
-        endif
     else
-        return
+        let records = []
+        for plug_name in a:args
+            let records += [s:MetaInfo.get_record_by_name(
+            \                   plug_name, s:MetaInfo.get_lockfile())]
+            if empty(records[-1])
+                call s:Msg.warn("'" . plug_name .
+                \               "' is not a managed plugin name.")
+                return
+            endif
+        endfor
     endif
     " Pre-check and build git update commands.
     let update_cmd_list = s:Vivo.build_update_cmd_list(records)
