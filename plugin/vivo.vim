@@ -35,6 +35,7 @@ command! -bar -nargs=*
 \   -complete=file
 \   VivoFetchAll call vivo#fetch_all(<f-args>)
 command! -bar -nargs=*
+\   -complete=customlist,vivo#__complete_plug_name__
 \   VivoUpdate call vivo#update(<f-args>)
 command! -bar -nargs=*
 \   -complete=file

@@ -4,7 +4,8 @@ set cpo&vim
 
 
 " autoload/vivo.vim must be runnable without other files
-" in vivo repository.
+" in vivo repository. so check here even this check was done in
+" plugin/vivo.vim
 if !executable('git')
     echohl ErrorMsg
     echomsg "vivo: 'git' is not installed in your PATH."
@@ -507,10 +508,29 @@ function! s:Vivo_cmd_fetch_all_help() abort dict
 endfunction
 call s:method('Vivo', 'cmd_fetch_all_help')
 
-function! s:Vivo_update(...) abort dict
+function! s:Vivo_update(args) abort dict
+    if len(a:args) ==# 0
+        let records = s:MetaInfo.get_records_from_file(s:MetaInfo.get_lockfile())
+    elseif len(a:args) ==# 1
+        let records = [s:MetaInfo.get_record_by_name(a:args[0], s:MetaInfo.get_lockfile())]
+        if empty(records[0])
+            call s:Msg.warn("'" . plug_name .
+            \               "' is not a managed plugin name.")
+            return
+        endif
+    else
+        return
+    endif
     " Pre-check and build git update commands.
+    let update_cmd_list = s:Vivo.build_update_cmd_list(records)
+    " Update all plugins.
+    call s:Vivo.do_update_plugins(update_cmd_list)
+endfunction
+call s:method('Vivo', 'update')
+
+function! s:Vivo_build_update_cmd_list(records) abort
     let update_cmd_list = []
-    for record in s:MetaInfo.get_records_from_file(s:MetaInfo.get_lockfile())
+    for record in a:records
         let plug_dir = s:FS.abspath_record_dir(record.dir)
         if !isdirectory(plug_dir)
             call add(update_cmd_list,
@@ -523,7 +543,8 @@ function! s:Vivo_update(...) abort dict
             call add(update_cmd_list,
             \   {'name': record.name,
             \    'work_tree': plug_dir,
-            \    'args': ['pull', pullinfo.remote, pullinfo.branch]})
+            \    'args': ['pull', pullinfo.remote, pullinfo.branch],
+            \    'branch': pullinfo.branch})
         else
             " If the branch does not have a upstream, shows an error.
             call add(update_cmd_list,
@@ -531,11 +552,16 @@ function! s:Vivo_update(...) abort dict
             \                . "update plugin '%s'.", record.name),
             \    'highlight': 'WarningMsg'})
             call s:Msg.debug(printf("vivo: couldn't find a way to "
-            \                . "update plugin '%s'.", record.name))
+            \                . "update plugin '%s' (branch: %s).",
+            \                   record.name, record.branch))
         endif
     endfor
-    " Update all plugins.
-    for cmd in update_cmd_list
+    return update_cmd_list
+endfunction
+call s:method('Vivo', 'build_update_cmd_list')
+
+function! s:Vivo_do_update_plugins(update_cmd_list) abort
+    for cmd in a:update_cmd_list
         if has_key(cmd, 'msg')
             call s:Msg.info(cmd.msg, cmd.highlight)
         else
@@ -549,18 +575,18 @@ function! s:Vivo_update(...) abort dict
             let ver = s:FS.git({'work_tree': cmd.work_tree,
             \                   'args': ['rev-parse', '--short', 'HEAD']})
             if oldver !=# ver
-                call s:Msg.info(printf('%s: Updated (%.1fs, %s -> %s)',
-                \                       name, time, oldver, ver))
+                call s:Msg.info(printf('%s: Updated (%.1fs for [%s] %s -> %s)',
+                \                       name, time, cmd.branch, oldver, ver))
             else
-                call s:Msg.info(printf('%s: Unchanged (%.1fs, %s)',
-                \                       name, time, ver), 'Normal')
+                call s:Msg.info(printf('%s: Unchanged (%.1fs for [%s] %s)',
+                \                       name, time, cmd.branch, ver), 'Normal')
             endif
         endif
     endfor
     call s:Msg.info(' ')
     call s:Msg.info('Updated all plugins!')
 endfunction
-call s:method('Vivo', 'update')
+call s:method('Vivo', 'do_update_plugins')
 
 function! s:Vivo_cmd_update_help() abort dict
     echo ' '
