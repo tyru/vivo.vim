@@ -204,6 +204,7 @@ function! s:Vivo_install(args) abort dict
         return self.cmd_install_help()
     endif
     if a:args[0] ==# '--pack'
+        " TODO: https://github.com/tyru/vivo.vim/issues/3
         return s:Vivo.copy_plugins_to_pack_dir_wildcard(a:args[1:])
     endif
     if len(a:args) !=# 1
