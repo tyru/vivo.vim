@@ -25,7 +25,7 @@ This plugin is designed for the following policies.
   * It shouldn't be there(.vimrc)!!!
 5. I don't want to write plugins' configurations in .vimrc, too!
   * It is **painful** to remove the configurations by hand after you uninstall a plugin...
-  * By default, a configuration file per a plugin is `~/.vim/bundleconfig/<plugin name>.vim`.
+  * By default, a configuration file per a plugin is `~/.vim/plugconf/<plugin name>.vim`.
   * It also shouldn't be there! isn't it?
 6. Thin wrapper plugin for external command (TODO)
   * If a vim plugin gets bigger, the code should be split into external command.
@@ -183,13 +183,14 @@ endif
 call vivo#fetch_all()
 
 " Add managed plugins to 'runtimepath'.
-" (It won't load disabled plugins)
-call vivo#load_plugins()
+" (It won't add disabled plugins)
+filetype off
+call vivo#rtp_append_plugins()
 filetype plugin indent on
 
-" Load all bundle configs in '~/.vim/bundleconfig/*.vim' (if you prefer).
-" This function loads plugin list from 'runtimepath'.
-call vivo#bundleconfig#load()
+" Load all plugin configs from '~/.vim/vivo/plugconf/*.vim'
+" (if you prefer writing configs in separated files from vimrc).
+call vivo#plugconf#load()
 
 " Generate helptags for plugins in 'runtimepath'.
 call vivo#helptags()
