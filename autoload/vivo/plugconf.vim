@@ -28,8 +28,11 @@ function! vivo#plugconf#load(...) abort
             let name = s:get_no_suffix_name(plug_dir)
             if name !=# ''
                 let s:plugconf[name] = {
-                \   "name": name, "path": plug_dir,
-                \   "done": 0, "disabled": 0, "user": {},
+                \   "name": name,
+                \   "plug_dir": plug_dir,
+                \   "done": 0,
+                \   "disabled": 0,
+                \   "user": {},
                 \}
             endif
         endif
@@ -96,15 +99,17 @@ function! s:load_all_plugconf()
         if bcconf.done
             continue
         endif
-        call s:load_plugconf(bcconf)
+        call s:load_config(bcconf)
     endfor
 endfunction
 
 function! s:do_source(bcconf)
     let s:loading_plugconf = a:bcconf
     try
-        execute 'runtime! vivo/plugconf/' . a:bcconf.name . '/**/*.vim'
-        execute 'runtime! vivo/plugconf/' . a:bcconf.name . '.vim'
+        let loading_script = get(globpath(&rtp, 'vivo/plugconf/' . a:bcconf.name . '.vim', 1, 1), 0, '')
+        if loading_script !=# ''
+            execute 'source' loading_script
+        endif
 
         if has_key(a:bcconf.user, 'enable_if')
             let a:bcconf.disabled = !a:bcconf.user.enable_if()
@@ -126,20 +131,20 @@ function! s:do_source(bcconf)
             endfor
         endif
     catch
-        call s:Msg.error('--- Sourcing ' . a:bcconf.path . ' ... ---')
+        call s:Msg.error('--- Sourcing ' . loading_script . ' ---')
         for msg in split(v:exception, '\n')
             call s:Msg.error(msg)
         endfor
         for msg in split(v:throwpoint, '\n')
             call s:Msg.error(msg)
         endfor
-        call s:Msg.error('--- Sourcing ' . a:bcconf.path . ' ... ---')
+        call s:Msg.error('--- Sourcing ' . loading_script . ' ---')
     finally
         let s:loading_plugconf = {}
     endtry
 endfunction
 
-function! s:load_plugconf(bcconf)
+function! s:load_config(bcconf)
     if a:bcconf.disabled
         return 0
     endif
@@ -149,7 +154,7 @@ function! s:load_plugconf(bcconf)
             let depends = a:bcconf.user.depends()
             for depname in type(depends) is type([]) ? depends : [depends]
                 if !has_key(s:plugconf, depname) ||
-                \   !s:load_plugconf(s:plugconf[depname])
+                \   !s:load_config(s:plugconf[depname])
                     let depfail += [depname]
                 endif
             endfor
@@ -165,14 +170,15 @@ function! s:load_plugconf(bcconf)
             call a:bcconf.user.config()
         endif
     catch
-        call s:Msg.error('--- Loading ' . a:bcconf.path . ' ... ---')
+        let loading_script = globpath(&rtp, 'vivo/plugconf/' . a:bcconf.name . '.vim', 1, 1)[0]
+        call s:Msg.error('--- Loading ' . loading_script . ' ---')
         for msg in split(v:exception, '\n')
             call s:Msg.error(msg)
         endfor
         for msg in split(v:throwpoint, '\n')
             call s:Msg.error(msg)
         endfor
-        call s:Msg.error('--- Loading ' . a:bcconf.path . ' ... ---')
+        call s:Msg.error('--- Loading ' . loading_script . ' ---')
         return 0
     finally
         let s:loading_plugconf = {}
