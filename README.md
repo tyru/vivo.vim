@@ -1,3 +1,5 @@
+**WARNING: This plugin is deprecated. Please use [vim-volt](https://github.com/vim-volt/vim-volt) instead.**
+
 [![Build Status](https://travis-ci.org/tyru/vivo.vim.svg?branch=master)](https://travis-ci.org/tyru/vivo.vim)
 
 # What's this?
