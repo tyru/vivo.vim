@@ -1,6 +1,11 @@
-**WARNING: This plugin is deprecated. Please use [vim-volt](https://github.com/vim-volt/vim-volt) instead.**
+**WARNING: This plugin is deprecated. Please use the followings instead.**
+
+* **[vim-volt/volt](https://github.com/vim-volt/volt): Vim plugin manager written in Go**
+* **[vim-volt/vim-volt](https://github.com/vim-volt/vim-volt): Its vim plugin interface**
 
 [![Build Status](https://travis-ci.org/tyru/vivo.vim.svg?branch=master)](https://travis-ci.org/tyru/vivo.vim)
+
+-----
 
 # What's this?
 
